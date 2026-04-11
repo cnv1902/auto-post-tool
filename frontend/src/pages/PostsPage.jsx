@@ -75,10 +75,15 @@ export default function PostsPage() {
 
     setDeleting(true)
     try {
+      const itemsToDelete = Array.from(selected).map(id => {
+        const post = posts.find(p => p.post_id === id)
+        return { post_id: id, page_id: post?.page_id || '' }
+      })
+
       const res = await fetch(`${API}/api/posts/bulk`, {
         method: 'DELETE',
         headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ post_ids: Array.from(selected) }),
+        body: JSON.stringify({ items: itemsToDelete }),
       })
       const data = await res.json()
       console.log('Bulk delete result:', data)
@@ -92,10 +97,10 @@ export default function PostsPage() {
     }
   }
 
-  async function handleDeleteSingle(postId) {
+  async function handleDeleteSingle(postId, pageId) {
     if (!confirm('Xóa bài viết này?')) return
     try {
-      await fetch(`${API}/api/posts/${encodeURIComponent(postId)}`, {
+      await fetch(`${API}/api/posts/${encodeURIComponent(postId)}?page_id=${encodeURIComponent(pageId)}`, {
         method: 'DELETE',
         headers: getAuthHeaders(),
       })
@@ -270,7 +275,7 @@ export default function PostsPage() {
                     )}
                     <button
                       className="btn-delete-single"
-                      onClick={() => handleDeleteSingle(post.post_id)}
+                      onClick={() => handleDeleteSingle(post.post_id, post.page_id)}
                       title="Xóa bài viết"
                     >
                       🗑️

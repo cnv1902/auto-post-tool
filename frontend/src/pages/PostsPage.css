@@ -349,3 +349,41 @@
   background: rgba(251,191,36,0.12);
   color: var(--warning);
 }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .posts-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .posts-header-left, .posts-header-right {
+    justify-content: space-between;
+    width: 100%;
+  }
+  .posts-search-box {
+    width: 100%;
+    flex: 1;
+  }
+  .posts-search {
+    width: 100%;
+  }
+  .posts-table-wrap {
+    overflow-x: auto;
+  }
+  .posts-table {
+    min-width: 800px;
+  }
+  .posts-bulk-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .bulk-count {
+    text-align: center;
+  }
+  .btn-bulk-delete, .btn-bulk-cancel {
+    width: 100%;
+    text-align: center;
+  }
+}
+

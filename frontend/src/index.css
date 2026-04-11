@@ -298,3 +298,42 @@ body {
   font-size: 0.78rem;
   font-weight: 600;
 }
+
+/* ─── Responsive (Tablet & Mobile) ─── */
+@media (max-width: 768px) {
+  .app-header {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 16px;
+    gap: 16px;
+    justify-content: center;
+  }
+  .app-main {
+    padding: 16px;
+  }
+  .logo {
+    width: 100%;
+    justify-content: center;
+  }
+  .tabs {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    justify-content: flex-start;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .tab-btn {
+    white-space: nowrap;
+    padding: 8px 14px;
+    font-size: 0.8rem;
+  }
+  .header-user {
+    width: 100%;
+    justify-content: space-between;
+    padding-left: 0;
+    margin-left: 0;
+  }
+}

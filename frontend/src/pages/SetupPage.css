@@ -104,3 +104,14 @@
 .page-info strong { font-size: 0.9rem; color: var(--text-primary); }
 .page-info small { font-size: 0.75rem; color: var(--text-muted); font-family: monospace; }
 .page-check { color: var(--success); font-weight: 700; font-size: 1rem; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .setup-card {
+    padding: 24px 16px;
+    margin: 16px;
+  }
+  .setup-header h2 {
+    font-size: 1.3rem;
+  }
+}

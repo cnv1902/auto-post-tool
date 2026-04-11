@@ -312,3 +312,21 @@
     text-align: center;
   }
 }
+
+@media (max-width: 768px) {
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+  .publish-top-row {
+    gap: 12px;
+  }
+  .scheduling-block {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .schedule-datetime {
+    max-width: 100%;
+    width: 100%;
+  }
+}

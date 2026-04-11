@@ -129,7 +129,7 @@ function UserApp() {
             disabled={!configured}
           >
             📝 Đăng bài
-            {configured ? <span className="tab-badge">{pagesCount}</span> : <span className="tab-lock">🔒</span>}
+            {!configured && <span className="tab-lock">🔒</span>}
           </button>
           <button
             className={`tab-btn ${tab === 'posts' ? 'active' : ''}`}

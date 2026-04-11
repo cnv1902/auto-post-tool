@@ -135,3 +135,14 @@
   color: #22c55e;
   font-size: 0.85rem;
 }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .init-card {
+    padding: 24px 20px;
+  }
+  .init-page {
+    padding: 12px;
+  }
+}
+
