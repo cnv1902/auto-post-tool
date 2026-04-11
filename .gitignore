@@ -5,3 +5,4 @@ __pycache__
 /frontend/.env
 /.vscode
 /venv
+/backend/venv
