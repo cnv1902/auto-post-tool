@@ -34,7 +34,8 @@ async def _save_upload(file: UploadFile, suffix: str) -> str:
 async def publish(
     page_id:     Annotated[str, Form()],
     message:     Annotated[str, Form()],
-    safe_link:   Annotated[str, Form()],
+    card1_link:  Annotated[str, Form()],
+    card2_link:  Annotated[str, Form()],
     card1_title: Annotated[str, Form()],
     card2_title: Annotated[str, Form()],
     card1_desc:  Annotated[str, Form()] = "",
@@ -91,7 +92,7 @@ async def publish(
         import json
         payload = {
             "page_id": page_id, "ad_account_id": ad_account_id,
-            "message": message, "safe_link": safe_link,
+            "message": message, "card1_link": card1_link, "card2_link": card2_link,
             "card1_title": card1_title, "card2_title": card2_title,
             "card1_desc": card1_desc, "card2_desc": card2_desc,
             "card1_cta": card1_cta, "card2_cta": card2_cta,
@@ -122,7 +123,8 @@ async def publish(
             page_id        = page_id,
             ad_account_id  = ad_account_id,
             message        = message,
-            safe_link      = safe_link,
+            card1_link     = card1_link,
+            card2_link     = card2_link,
             card1_title    = card1_title,
             card2_title    = card2_title,
             card1_desc     = card1_desc,

@@ -34,9 +34,9 @@ const CTA_TYPES = [
 ]
 
 const DEFAULT_CAROUSEL = {
-  pageId: '', message: '', safeLink: 'https://shopee.vn',
-  card1Title: 'Chi tiết sản phẩm 👉', card1Desc: '', card1Cta: 'LEARN_MORE',
-  card2Title: 'Xem thêm tại đây 👉', card2Desc: '', card2Cta: 'LEARN_MORE',
+  pageId: '', message: '',
+  card1Title: 'Chi tiết sản phẩm 👉', card1Desc: '', card1Link: 'https://shopee.vn', card1Cta: 'LEARN_MORE',
+  card2Title: 'Xem thêm tại đây 👉', card2Desc: '', card2Link: 'https://facebook.com', card2Cta: 'LEARN_MORE',
 }
 
 export default function PublishPage() {
@@ -209,9 +209,8 @@ export default function PublishPage() {
     const fd = new FormData()
     fd.append('page_id', pageId)
     fd.append('message', cForm.message)
-    fd.append('safe_link', cForm.safeLink)
-    fd.append('card1_title', cForm.card1Title); fd.append('card1_desc', cForm.card1Desc); fd.append('card1_cta', cForm.card1Cta)
-    fd.append('card2_title', cForm.card2Title); fd.append('card2_desc', cForm.card2Desc); fd.append('card2_cta', cForm.card2Cta)
+    fd.append('card1_link', cForm.card1Link); fd.append('card1_title', cForm.card1Title); fd.append('card1_desc', cForm.card1Desc); fd.append('card1_cta', cForm.card1Cta)
+    fd.append('card2_link', cForm.card2Link); fd.append('card2_title', cForm.card2Title); fd.append('card2_desc', cForm.card2Desc); fd.append('card2_cta', cForm.card2Cta)
     fd.append('video_file', videoFile)
     fd.append('thumbnail_file', thumbnailFile)
     fd.append('image_file', imageFile)
@@ -399,7 +398,6 @@ export default function PublishPage() {
               <div className="section-card glass card-config" style={{ borderLeft: '3px solid var(--accent)' }}>
                 <h3 className="section-title">✍️ Nội dung Carousel</h3>
                 <div className="field-group"><label>Caption</label><textarea className="token-input caption-input" rows={2} value={cForm.message} onChange={cSet('message')} /></div>
-                <div className="field-group"><label>Safe Link</label><input type="url" className="text-input" value={cForm.safeLink} onChange={cSet('safeLink')} /></div>
               </div>
               <div className="section-card glass card-config card1-config">
                 <h3 className="section-title">🃏 Card 1 — Video</h3>
@@ -407,7 +405,10 @@ export default function PublishPage() {
                   <div className="field-group"><label>Tiêu đề</label><input type="text" className="text-input" value={cForm.card1Title} onChange={cSet('card1Title')} /></div>
                   <div className="field-group"><label>CTA</label><select className="select-input" value={cForm.card1Cta} onChange={cSet('card1Cta')}>{CTA_TYPES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select></div>
                 </div>
-                <div className="field-group"><label>Mô tả <span className="hint">(tùy chọn)</span></label><input type="text" className="text-input" value={cForm.card1Desc} onChange={cSet('card1Desc')} maxLength={80} /></div>
+                <div className="field-row">
+                  <div className="field-group"><label>Link đích</label><input type="url" className="text-input" value={cForm.card1Link} onChange={cSet('card1Link')} /></div>
+                  <div className="field-group"><label>Mô tả (tùy chọn)</label><input type="text" className="text-input" value={cForm.card1Desc} onChange={cSet('card1Desc')} maxLength={80} /></div>
+                </div>
                 <FileUpload id="c-video" label="Video" accept="video/mp4,video/*" icon="🎬" file={videoFile} onFile={setVideoFile} />
                 <ThumbnailPicker videoFile={videoFile} onThumbnailReady={setThumbnailFile} />
               </div>
@@ -417,7 +418,10 @@ export default function PublishPage() {
                   <div className="field-group"><label>Tiêu đề</label><input type="text" className="text-input" value={cForm.card2Title} onChange={cSet('card2Title')} /></div>
                   <div className="field-group"><label>CTA</label><select className="select-input" value={cForm.card2Cta} onChange={cSet('card2Cta')}>{CTA_TYPES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select></div>
                 </div>
-                <div className="field-group"><label>Mô tả <span className="hint">(tùy chọn)</span></label><input type="text" className="text-input" value={cForm.card2Desc} onChange={cSet('card2Desc')} maxLength={80} /></div>
+                <div className="field-row">
+                  <div className="field-group"><label>Link đích</label><input type="url" className="text-input" value={cForm.card2Link} onChange={cSet('card2Link')} /></div>
+                  <div className="field-group"><label>Mô tả (tùy chọn)</label><input type="text" className="text-input" value={cForm.card2Desc} onChange={cSet('card2Desc')} maxLength={80} /></div>
+                </div>
                 <FileUpload id="c-image" label="Ảnh Card 2" accept="image/*" icon="🖼️" file={imageFile} onFile={setImageFile} />
               </div>
               <button className="btn-publish" onClick={handlePublishCarousel} disabled={publishing || !pageId}>
