@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
   FileVideo, Image as ImageIcon, Link as LinkIcon,
-  Layers, Clock, MonitorPlay, Send, Share2,
+  Layers, Clock, MonitorPlay, Send, Share2, LayoutList,
   CalendarDays, Settings2, FileText, Pointer, Loader2, PlaySquare, Info
 } from 'lucide-react'
 import FileUpload from '../components/FileUpload'
