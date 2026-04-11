@@ -21,9 +21,9 @@ CORS_ORIGINS = [o.strip() for o in _cors_raw.split(",") if o.strip()]
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "@Cchuong1009")
 
 # ── JWT ──
-JWT_SECRET = os.environ.get("JWT_SECRET", "towblock-jwt-secret-change-in-prod")
+JWT_SECRET = os.environ.get("JWT_SECRET", "autopost-jwt-secret-change-in-prod")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_HOURS = 72  # 3 ngày
 
-ADMIN_JWT_SECRET = os.environ.get("ADMIN_JWT_SECRET", "towblock-admin-secret-change-in-prod")
+ADMIN_JWT_SECRET = os.environ.get("ADMIN_JWT_SECRET", "autopost-admin-secret-change-in-prod")
 ADMIN_JWT_HOURS = 24 * 7  # 7 ngày

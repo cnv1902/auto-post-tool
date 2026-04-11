@@ -1,5 +1,5 @@
 """
-database.py — SQLAlchemy models cho TowBlock multi-user system.
+database.py — SQLAlchemy models cho Auto Post Tool multi-user system.
 
 Models:
   - User         : Facebook user đã đăng nhập
@@ -15,7 +15,8 @@ from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 from datetime import datetime
 import os
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "towblock.db")
+DB_DIR = os.environ.get("DB_DIR", os.path.dirname(__file__))
+DB_PATH = os.path.join(DB_DIR, "autopost.db")
 engine = create_engine(
     f"sqlite:///{DB_PATH}",
     connect_args={"check_same_thread": False},

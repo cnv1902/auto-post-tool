@@ -200,7 +200,7 @@ def get_me(user: User = Depends(get_current_user)):
 def logout():
     """Xóa JWT cookie."""
     response = JSONResponse(content={"ok": True})
-    response.delete_cookie(key="towblock_token", path="/")
+    response.delete_cookie(key="autopost_token", path="/")
     return response
 
 

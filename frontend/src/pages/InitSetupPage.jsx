@@ -48,7 +48,7 @@ export default function InitSetupPage({ onComplete }) {
           <span className="init-icon">🚀</span>
           <h1>Cài đặt ban đầu</h1>
           <p className="init-subtitle">
-            Chào mừng bạn đến với TowBlock Publisher!<br />
+            Chào mừng bạn đến với Auto Post Tool!<br />
             Để bắt đầu, hãy thêm thông tin Facebook App.
           </p>
         </div>

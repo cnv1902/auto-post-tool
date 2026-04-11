@@ -4,7 +4,7 @@ import './SetupPage.css'
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 function getAuthHeaders() {
-  const token = localStorage.getItem('towblock_token')
+  const token = localStorage.getItem('autopost_token')
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 

@@ -7,7 +7,7 @@ from config import CORS_ORIGINS
 from database import init_db
 from routers import setup, pages, publish, extract, video, posts, auth, admin, bootstrap
 
-app = FastAPI(title="TowBlock — Facebook Publisher", version="2.0.0")
+app = FastAPI(title="Auto Post Tool — Facebook Publisher", version="2.0.0")
 
 # CORS — load origins từ .env
 app.add_middleware(

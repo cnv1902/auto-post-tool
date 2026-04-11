@@ -40,7 +40,7 @@ def _extract_token(request: Request) -> str | None:
         return auth_header[7:]
 
     # 2. Cookie fallback
-    token = request.cookies.get("towblock_token")
+    token = request.cookies.get("autopost_token")
     if token:
         return token
 

@@ -47,7 +47,7 @@ export default function LoginPage({ subtitle }) {
       <div className="login-card glass">
         <div className="login-logo">
           <span className="login-icon">📣</span>
-          <h1>TowBlock Publisher</h1>
+          <h1>Auto Post Tool</h1>
           <p className="login-subtitle">{subtitle || 'Facebook Dark Post & Carousel Publisher'}</p>
         </div>
 

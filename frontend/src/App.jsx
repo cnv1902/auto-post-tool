@@ -31,7 +31,7 @@ function UserApp() {
   const [pagesCount, setPagesCount] = useState(0)
 
   // Helper: lấy token từ localStorage
-  const getToken = () => localStorage.getItem('towblock_token')
+  const getToken = () => localStorage.getItem('autopost_token')
   const getHeaders = () => {
     const t = getToken()
     return t ? { Authorization: `Bearer ${t}` } : {}
@@ -50,7 +50,7 @@ function UserApp() {
         setCurrentUser(await res.json())
       } else {
         // Backend trả lỗi → xóa phiên
-        localStorage.removeItem('towblock_token')
+        localStorage.removeItem('autopost_token')
         setCurrentUser(false)
       }
     } catch {
@@ -64,7 +64,7 @@ function UserApp() {
     const params = new URLSearchParams(window.location.search)
     const token = params.get('token')
     if (token) {
-      localStorage.setItem('towblock_token', token)
+      localStorage.setItem('autopost_token', token)
       window.history.replaceState({}, '', '/')
     }
     const authError = params.get('auth_error')
@@ -89,7 +89,7 @@ function UserApp() {
   useEffect(() => { checkConfig() }, [checkConfig])
 
   const handleLogout = () => {
-    localStorage.removeItem('towblock_token')
+    localStorage.removeItem('autopost_token')
     setCurrentUser(false)
   }
 
@@ -117,7 +117,7 @@ function UserApp() {
       <header className="app-header">
         <div className="logo">
           <span className="logo-icon">📣</span>
-          <span className="logo-text">TowBlock Publisher</span>
+          <span className="logo-text">Auto Post Tool</span>
         </div>
         <nav className="tabs">
           <button className={`tab-btn ${tab === 'setup' ? 'active' : ''}`} onClick={() => setTab('setup')}>
@@ -152,7 +152,7 @@ function UserApp() {
         {tab === 'posts' && configured && <PostsPage />}
       </main>
       <footer className="app-footer">
-        <span>TowBlock v2.0 • Multi-User Facebook Publisher</span>
+        <span>Auto Post Tool v2.0 • Multi-User Facebook Publisher</span>
       </footer>
     </div>
   )
@@ -169,7 +169,7 @@ function AdminApp() {
   const [error, setError] = useState('')
   const [logging, setLogging] = useState(false)
 
-  const getAdminToken = () => localStorage.getItem('towblock_admin_token')
+  const getAdminToken = () => localStorage.getItem('autopost_admin_token')
 
   useEffect(() => {
     // Verify existing admin token
@@ -178,7 +178,7 @@ function AdminApp() {
     fetch(`${API}/api/admin/verify`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => {
         if (r.ok) setState('authenticated')
-        else { localStorage.removeItem('towblock_admin_token'); setState('login') }
+        else { localStorage.removeItem('autopost_admin_token'); setState('login') }
       })
       .catch(() => setState('login'))
   }, [])
@@ -195,7 +195,7 @@ function AdminApp() {
       })
       const data = await res.json()
       if (res.ok && data.token) {
-        localStorage.setItem('towblock_admin_token', data.token)
+        localStorage.setItem('autopost_admin_token', data.token)
         setState('authenticated')
       } else {
         setError(data.detail || 'Sai mật khẩu')
@@ -208,7 +208,7 @@ function AdminApp() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('towblock_admin_token')
+    localStorage.removeItem('autopost_admin_token')
     setState('login')
   }
 
@@ -228,7 +228,7 @@ function AdminApp() {
         <div className="login-card glass">
           <div className="login-logo">
             <span className="login-icon">🔧</span>
-            <h1>TowBlock Admin</h1>
+            <h1>Auto Post Tool Admin</h1>
             <p className="login-subtitle">Quản trị hệ thống</p>
           </div>
           <form className="login-body" onSubmit={handleLogin} style={{ gap: 14 }}>
@@ -265,7 +265,7 @@ function AdminApp() {
       <header className="app-header">
         <div className="logo">
           <span className="logo-icon">🔧</span>
-          <span className="logo-text">TowBlock Admin</span>
+          <span className="logo-text">Auto Post Tool Admin</span>
         </div>
         <nav className="tabs">
           <a href="/" className="tab-btn">← Trang chính</a>
@@ -279,7 +279,7 @@ function AdminApp() {
         <AdminPage />
       </main>
       <footer className="app-footer">
-        <span>TowBlock v2.0 • Admin Dashboard</span>
+        <span>Auto Post Tool v2.0 • Admin Dashboard</span>
       </footer>
     </div>
   )

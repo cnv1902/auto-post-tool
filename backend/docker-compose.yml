@@ -1,0 +1,41 @@
+# ═══════════════════════════════════════════════════════════
+#  Auto Post Tool — Backend Docker Compose
+#  Frontend deploy trên Vercel, chỉ cần backend ở đây.
+# ═══════════════════════════════════════════════════════════
+
+services:
+  backend:
+    build: .
+    container_name: autopost-backend
+    restart: unless-stopped
+    ports:
+      - "8088:8000"
+    environment:
+      # ── URLs — thay bằng domain thật khi deploy ──
+      - FRONTEND_URL=https://autoposttoo.covit.site
+      - BACKEND_URL=https://autoposttool.itup.io.vn
+      # ── CORS — thêm domain Vercel vào đây ──
+      - CORS_ORIGINS=https://autoposttoo.covit.site
+      # ── Admin ──
+      - ADMIN_PASSWORD=@Cchuong1009
+      # ── Database ──
+      - DB_DIR=/app/data
+      # ── JWT — ĐỔI secret trước khi deploy production ──
+      - JWT_SECRET=thay-bang-secret-that-o-day
+      - ADMIN_JWT_SECRET=thay-bang-admin-secret-that-o-day
+    volumes:
+      # Persist database & uploads bên ngoài container
+      - autopost-data:/app/data
+      - autopost-uploads:/app/uploads
+      - autopost-db:/app/db
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  autopost-data:
+  autopost-uploads:
+  autopost-db:
