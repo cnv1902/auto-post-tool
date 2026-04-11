@@ -1,0 +1,137 @@
+/* ═══════════════════════════════
+   InitSetupPage — First-time setup
+   ═══════════════════════════════ */
+
+.init-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.init-card {
+  width: 100%;
+  max-width: 560px;
+  padding: 36px;
+}
+
+.init-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.init-icon {
+  font-size: 2.8rem;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.init-header h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), #f76a8a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0 0 8px;
+}
+
+.init-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* Steps guide */
+.init-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: rgba(124,106,247,0.04);
+  border: 1px solid rgba(124,106,247,0.1);
+}
+
+.init-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.step-num {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #f76a8a);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.init-step div {
+  flex: 1;
+}
+
+.init-step strong {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.init-step p {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 2px 0 0;
+  line-height: 1.5;
+}
+
+.init-step a {
+  color: var(--accent);
+}
+
+.redirect-uri {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: rgba(0,0,0,0.3);
+  font-size: 0.75rem;
+  color: #22c55e;
+  word-break: break-all;
+}
+
+/* Form */
+.init-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.btn-lg {
+  padding: 14px 24px !important;
+  font-size: 1rem !important;
+}
+
+/* Footer */
+.init-footer {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* Alert success */
+.alert-success {
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: rgba(34,197,94,0.1);
+  border: 1px solid rgba(34,197,94,0.2);
+  color: #22c55e;
+  font-size: 0.85rem;
+}
