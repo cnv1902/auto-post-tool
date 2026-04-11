@@ -1,11 +1,11 @@
 .thumb-picker {
   background: rgba(255,255,255,0.03);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 16px;
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .thumb-picker-header {
@@ -14,7 +14,7 @@
   justify-content: space-between;
 }
 .thumb-picker-title {
-  font-size: 0.82rem;
+  font-size: 0.76rem;
   font-weight: 600;
   color: var(--text-secondary);
   text-transform: uppercase;

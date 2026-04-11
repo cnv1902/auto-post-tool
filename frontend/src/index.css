@@ -180,10 +180,10 @@ body {
 .field-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 .field-group label {
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   font-weight: 600;
   color: var(--text-secondary);
   text-transform: uppercase;
@@ -193,10 +193,10 @@ body {
   background: rgba(255,255,255,0.04);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 10px 14px;
+  padding: 8px 12px;
   color: var(--text-primary);
   font-family: 'Inter', sans-serif;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   transition: var(--transition);
   outline: none;
   width: 100%;
@@ -275,17 +275,17 @@ body {
 
 /* ─── Section cards ─── */
 .section-card {
-  padding: 20px 24px;
+  padding: 16px 20px;
   border-radius: var(--radius-md);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 .section-title {
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   font-weight: 600;
   color: var(--text-primary);
-  padding-bottom: 12px;
+  padding-bottom: 10px;
   border-bottom: 1px solid var(--border);
 }
 
