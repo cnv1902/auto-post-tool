@@ -177,27 +177,27 @@ export default function PublishPage() {
         {/* Nội dung bài viết */}
         <div className="section-card glass top-card-content">
           <h3 className="section-title">✍️ Nội dung bài viết</h3>
+          <div className="scheduling-block" style={{ display: 'flex', gap: '20px', alignItems: 'center', marginBottom: '16px', padding: '12px 16px', background: 'var(--bg-card-inner, rgba(255,255,255,0.05))', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: '600', color: 'var(--text-main)', fontSize: '0.95rem' }}>
+              <input 
+                type="checkbox" 
+                checked={isScheduled} 
+                onChange={e => setIsScheduled(e.target.checked)} 
+                style={{ width: '18px', height: '18px', accentColor: 'var(--accent)' }}
+              />
+              ⏳ Lên lịch đăng bài
+            </label>
+            {isScheduled && (
+              <input 
+                type="datetime-local" 
+                className="text-input" 
+                value={scheduledTime} 
+                onChange={e => setScheduledTime(e.target.value)} 
+                style={{ padding: '8px 12px', maxWidth: '250px', background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--text-main)', borderRadius: 'var(--radius-sm)' }}
+              />
+            )}
+          </div>
           <div className="top-content-fields">
-            <div className="field-group row-flex" style={{ display: 'flex', gap: '20px', alignItems: 'center', marginBottom: '10px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                <input 
-                  type="checkbox" 
-                  checked={isScheduled} 
-                  onChange={e => setIsScheduled(e.target.checked)} 
-                  style={{ width: '18px', height: '18px' }}
-                />
-                Lên lịch đăng bài
-              </label>
-              {isScheduled && (
-                <input 
-                  type="datetime-local" 
-                  className="text-input" 
-                  value={scheduledTime} 
-                  onChange={e => setScheduledTime(e.target.value)} 
-                  style={{ padding: '8px', maxWidth: '250px' }}
-                />
-              )}
-            </div>
             <div className="field-group">
               <label>Caption</label>
               <textarea
