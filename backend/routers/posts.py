@@ -16,12 +16,12 @@ from auth import get_current_user
 router = APIRouter()
 
 
-def fetch_fb_posts(page: Page, limit: int = 50) -> List[dict]:
+def fetch_fb_posts(page_id: str, page_name: str, page_token: str, limit: int = 50) -> List[dict]:
     """Helper method to fetch posts from FB graph API for a specific page."""
-    url = f"https://graph.facebook.com/v19.0/{page.page_id}/posts"
+    url = f"https://graph.facebook.com/v19.0/{page_id}/posts"
     params = {
         "fields": "id,message,created_time,permalink_url,full_picture",
-        "access_token": page.page_access_token,
+        "access_token": page_token,
         "limit": limit
     }
     
@@ -33,8 +33,8 @@ def fetch_fb_posts(page: Page, limit: int = 50) -> List[dict]:
         for p in data.get("data", []):
             fb_posts.append({
                 "post_id":       p.get("id"),
-                "page_id":       page.page_id,
-                "page_name":     page.page_name,
+                "page_id":       page_id,
+                "page_name":     page_name,
                 "message":       p.get("message", ""),
                 "permalink":     p.get("permalink_url", f"https://www.facebook.com/{p.get('id')}"),
                 "thumbnail_url": p.get("full_picture", ""),
@@ -43,7 +43,7 @@ def fetch_fb_posts(page: Page, limit: int = 50) -> List[dict]:
             })
         return fb_posts
     except Exception as e:
-        print(f"[list_posts] FB API error for page {page.page_id}: {e}")
+        print(f"[list_posts] FB API error for page {page_id}: {e}")
         return []
 
 
@@ -71,9 +71,13 @@ def list_posts(
     # 2. Fetch Facebook Posts (có thể có nhiều page nên xài threads)
     fb_all_posts = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        future_to_page = {executor.submit(fetch_fb_posts, p): p for p in pages}
+        future_to_page = {executor.submit(fetch_fb_posts, p.page_id, p.page_name, p.page_access_token): p.page_id for p in pages}
         for future in concurrent.futures.as_completed(future_to_page):
-            fb_all_posts.extend(future.result())
+            try:
+                res = future.result()
+                fb_all_posts.extend(res)
+            except Exception as e:
+                print(f"[list_posts] Thread error fetching posts: {e}")
 
     # 3. Lấy local scheduled posts từ DB
     db_query = db.query(Post).filter(Post.user_id == current_user.id, Post.status == "scheduled")
