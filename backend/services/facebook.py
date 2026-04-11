@@ -221,6 +221,7 @@ def post_darkpost_carousel(
     thumbnail_url: str,
     img_url: str,
     card2_file_path: str,
+    scheduled_time: Optional[int] = None,
 ) -> dict:
     """
     Tạo dark post carousel.
@@ -310,9 +311,16 @@ def post_darkpost_carousel(
         return {"success": False, "error": "Không lấy được Post ID sau 15 lần thử."}
 
     # Bước 3: Publish
+    payload = {"access_token": page_token}
+    if scheduled_time:
+        payload["is_published"] = "false"
+        payload["scheduled_publish_time"] = str(scheduled_time)
+    else:
+        payload["is_published"] = "true"
+
     requests.post(
         f"{BASE_URL}/{post_id}",
-        data={"is_published": "true", "access_token": page_token},
+        data=payload,
         timeout=15,
     )
 
@@ -363,6 +371,7 @@ async def publish_stream(
     video_path: str,
     thumbnail_path: str,
     image_path: str,
+    scheduled_time: Optional[int] = None,
 ) -> AsyncGenerator[str, None]:
     """
     Async generator yield từng dòng log dạng SSE data.
@@ -442,11 +451,14 @@ async def publish_stream(
             thumbnail_url,
             img_url,
             image_path,
+            scheduled_time,
         )
 
         if result["success"]:
-            yield emit("success", f"🎉 BÀI ĐÃ PUBLIC!")
+            yield emit("success", f"🎉 BÀI ĐÃ {'LÊN LỊCH' if scheduled_time else 'PUBLIC'}!")
             yield emit("link", result["permalink"])
+            # Yield post_id so backend DB can store the real FB graph post_id
+            yield emit("post_id", result["post_id"])
         else:
             yield emit("error", f"❌ {result.get('error', 'Lỗi không xác định')}")
             if result.get("permalink"):

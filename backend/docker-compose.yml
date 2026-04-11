@@ -12,10 +12,10 @@ services:
       - "8088:8000"
     environment:
       # ── URLs — thay bằng domain thật khi deploy ──
-      - FRONTEND_URL=https://autoposttoo.covit.site
+      - FRONTEND_URL=https://autoposttool.covit.site
       - BACKEND_URL=https://autoposttool.itup.io.vn
       # ── CORS — thêm domain Vercel vào đây ──
-      - CORS_ORIGINS=https://autoposttoo.covit.site
+      - CORS_ORIGINS=https://autoposttool.covit.site
       # ── Admin ──
       - ADMIN_PASSWORD=@Cchuong1009
       # ── Database ──

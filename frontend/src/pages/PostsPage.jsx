@@ -222,7 +222,7 @@ export default function PostsPage() {
                   </td>
                   <td>
                     <span className={`status-badge status-${post.status}`}>
-                      {post.status === 'published' ? '✅ Đã đăng' : post.status}
+                      {post.status === 'published' ? '✅ Đã đăng' : post.status === 'scheduled' ? '⏳ Đã lên lịch' : post.status}
                     </span>
                   </td>
                   <td className="td-date">{formatDate(post.created_at)}</td>

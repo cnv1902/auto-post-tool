@@ -56,6 +56,8 @@ export default function PublishPage() {
   const [publishing, setPublishing]         = useState(false)
   const [done, setDone]                     = useState(false)
   const [permalink, setPermalink]           = useState(null)
+  const [isScheduled, setIsScheduled]       = useState(false)
+  const [scheduledTime, setScheduledTime]   = useState('')
 
   useEffect(() => {
     fetch(`${API}/api/pages`, { headers: getAuthHeaders() })
@@ -81,6 +83,12 @@ export default function PublishPage() {
     setPublishing(true)
     setDone(false)
     setPermalink(null)
+    
+    let scheduledUnix = ''
+    if (isScheduled) {
+      if (!scheduledTime) return alert('Vui lòng chọn thời gian lên lịch')
+      scheduledUnix = Math.floor(new Date(scheduledTime).getTime() / 1000).toString()
+    }
 
     const fd = new FormData()
     fd.append('page_id',        form.pageId)
@@ -95,6 +103,9 @@ export default function PublishPage() {
     fd.append('video_file',     videoFile)
     fd.append('thumbnail_file', thumbnailFile)
     fd.append('image_file',     imageFile)
+    if (isScheduled && scheduledUnix) {
+      fd.append('scheduled_time', scheduledUnix)
+    }
 
     try {
       const res = await fetch(`${API}/api/publish`, {
@@ -167,6 +178,26 @@ export default function PublishPage() {
         <div className="section-card glass top-card-content">
           <h3 className="section-title">✍️ Nội dung bài viết</h3>
           <div className="top-content-fields">
+            <div className="field-group row-flex" style={{ display: 'flex', gap: '20px', alignItems: 'center', marginBottom: '10px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" 
+                  checked={isScheduled} 
+                  onChange={e => setIsScheduled(e.target.checked)} 
+                  style={{ width: '18px', height: '18px' }}
+                />
+                Lên lịch đăng bài
+              </label>
+              {isScheduled && (
+                <input 
+                  type="datetime-local" 
+                  className="text-input" 
+                  value={scheduledTime} 
+                  onChange={e => setScheduledTime(e.target.value)} 
+                  style={{ padding: '8px', maxWidth: '250px' }}
+                />
+              )}
+            </div>
             <div className="field-group">
               <label>Caption</label>
               <textarea

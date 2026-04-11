@@ -3,12 +3,13 @@ GET    /api/posts        — danh sách bài viết CỦA USER HIỆN TẠI
 DELETE /api/posts/bulk   — xóa hàng loạt (chỉ posts của user)
 DELETE /api/posts/{id}   — xóa 1 bài viết (chỉ nếu thuộc user)
 """
+import requests
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from typing import List
 
-from database import get_db, User, Post
+from database import get_db, User, Post, Page
 from auth import get_current_user
 
 router = APIRouter()
@@ -54,9 +55,20 @@ def bulk_delete_posts(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Xóa hàng loạt — chỉ xóa posts thuộc về user hiện tại."""
+    """Xóa hàng loạt — xóa FB API và sau đó xóa khỏi DB."""
     if not payload.post_ids:
         raise HTTPException(status_code=400, detail="Danh sách post_ids không được rỗng.")
+
+    posts_to_delete = db.query(Post).filter(Post.post_id.in_(payload.post_ids), Post.user_id == current_user.id).all()
+    
+    # Gửi FB Delete
+    for post in posts_to_delete:
+        page = db.query(Page).filter(Page.page_id == post.page_id, Page.user_id == current_user.id).first()
+        if page and page.page_access_token:
+            try:
+                requests.delete(f"https://graph.facebook.com/v19.0/{post.post_id}", params={"access_token": page.page_access_token}, timeout=10)
+            except Exception as e:
+                print(f"[bulk_delete] Failed to delete on FB: {e}")
 
     deleted = (
         db.query(Post)
@@ -73,7 +85,7 @@ def delete_post(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Xóa 1 bài viết — chỉ nếu thuộc về user hiện tại."""
+    """Xóa 1 bài viết — xóa trên FB trước rồi xóa DB."""
     post = (
         db.query(Post)
         .filter(Post.post_id == post_id, Post.user_id == current_user.id)
@@ -81,6 +93,14 @@ def delete_post(
     )
     if not post:
         raise HTTPException(status_code=404, detail=f"Không tìm thấy bài viết: {post_id}")
+
+    page = db.query(Page).filter(Page.page_id == post.page_id, Page.user_id == current_user.id).first()
+    if page and page.page_access_token:
+        try:
+            res = requests.delete(f"https://graph.facebook.com/v19.0/{post.post_id}", params={"access_token": page.page_access_token}, timeout=10)
+            print(f"[delete_post] FB Response: {res.text}")
+        except Exception as e:
+            print(f"[delete_post] Exception FB: {e}")
 
     db.delete(post)
     db.commit()

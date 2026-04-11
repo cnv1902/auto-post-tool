@@ -41,6 +41,7 @@ async def publish(
     card2_desc:  Annotated[str, Form()] = "",
     card1_cta:   Annotated[str, Form()] = "LEARN_MORE",
     card2_cta:   Annotated[str, Form()] = "LEARN_MORE",
+    scheduled_time: Annotated[str, Form()] = "",
     video_file:     UploadFile = File(...),
     thumbnail_file: UploadFile = File(...),
     image_file:     UploadFile = File(...),
@@ -80,6 +81,10 @@ async def publish(
 
     # Biến capture post info cho DB
     captured_post = {}
+    
+    parsed_scheduled_time = None
+    if scheduled_time.isdigit():
+        parsed_scheduled_time = int(scheduled_time)
 
     async def event_generator():
         async for chunk in publish_stream(
@@ -98,6 +103,7 @@ async def publish(
             video_path     = video_path,
             thumbnail_path = thumbnail_path,
             image_path     = image_path,
+            scheduled_time = parsed_scheduled_time,
         ):
             # Capture post info từ stream để lưu DB
             if chunk.startswith("data: ") and chunk.strip() != "data: [DONE]":
@@ -105,7 +111,9 @@ async def publish(
                     data = json.loads(chunk[6:].strip())
                     if data.get("level") == "link":
                         captured_post["permalink"] = data["msg"]
-                    if data.get("level") == "success" and "BÀI ĐÃ PUBLIC" in data.get("msg", ""):
+                    if data.get("level") == "post_id":
+                        captured_post["post_id"] = data["msg"]
+                    if data.get("level") == "success" and ("BÀI ĐÃ PUBLIC" in data.get("msg", "") or "BÀI ĐÃ LÊN LỊCH" in data.get("msg", "")):
                         captured_post["success"] = True
                 except Exception:
                     pass
@@ -113,13 +121,16 @@ async def publish(
             # Nếu done + success → lưu Post vào DB với user_id
             if chunk.strip() == "data: [DONE]" and captured_post.get("success"):
                 try:
+                    # Prefer the real FB post_id, fallback to old logic
+                    real_post_id = captured_post.get("post_id") or captured_post.get("permalink", "").split("/")[-1] or uuid.uuid4().hex
+                    post_status = "scheduled" if parsed_scheduled_time else "published"
                     post = Post(
-                        post_id   = captured_post.get("permalink", "").split("/")[-1] or uuid.uuid4().hex,
+                        post_id   = real_post_id,
                         page_id   = page_id,
                         page_name = page.page_name,
                         message   = message[:500],
                         permalink = captured_post.get("permalink", ""),
-                        status    = "published",
+                        status    = post_status,
                         user_id   = current_user.id,  # ← per-user!
                     )
                     db.add(post)
