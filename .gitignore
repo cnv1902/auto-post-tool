@@ -1,8 +1,18 @@
-/frontend/node_modules
-/backend/__pycache__
-__pycache__
-/backend/.env
-/frontend/.env
-/.vscode
-/venv
-/backend/venv
+# Node
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+
+# Env
+.env
+backend/.env
+frontend/.env
+
+# Venv
+venv/
+backend/venv/
+
+# IDE
+.vscode/

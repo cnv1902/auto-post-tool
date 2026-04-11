@@ -18,6 +18,7 @@
   text-align: center;
   position: relative;
   z-index: 1;
+  box-sizing: border-box;
 }
 
 .login-logo {
@@ -118,9 +119,31 @@
   .login-card {
     padding: 32px 24px;
     margin: 16px;
+    max-width: calc(100% - 32px);
   }
   .login-icon {
     font-size: 2.5rem;
   }
+}
+
+@media (max-width: 480px) {
+  .login-card {
+    padding: 28px 20px;
+    margin: 12px;
+    max-width: calc(100% - 24px);
+    border-radius: 14px;
+  }
+  .login-card h1 { font-size: 1.45rem; }
+  .login-icon { font-size: 2.2rem; }
+  .btn-facebook { padding: 12px 16px; font-size: 0.95rem; }
+}
+
+@media (max-width: 360px) {
+  .login-card {
+    padding: 22px 14px;
+    margin: 8px;
+    max-width: calc(100% - 16px);
+  }
+  .login-card h1 { font-size: 1.3rem; }
 }
 

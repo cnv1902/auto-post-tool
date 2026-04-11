@@ -8,6 +8,8 @@
   gap: 18px;
   max-width: 1300px;
   margin: 0 auto;
+  min-width: 0;
+  width: 100%;
 }
 
 .admin-header {
@@ -58,9 +60,12 @@
 /* ── Table ── */
 .admin-table-wrapper {
   overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: var(--bg-card);
+  max-width: 100%;
 }
 
 .admin-table {
@@ -186,7 +191,7 @@
 
 @media (max-width: 900px) {
   .app-form-fields {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
   }
 }
 
@@ -208,7 +213,18 @@
     white-space: nowrap;
   }
   .admin-table {
-    min-width: 700px;
+    min-width: 600px;
   }
+  .app-form-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-header h2 { font-size: 1.1rem; }
+  .admin-tab { padding: 7px 12px; font-size: 0.8rem; }
+  .admin-table { min-width: 480px; }
+  .admin-table th, .admin-table td { padding: 9px 10px; }
+  .app-form { padding: 14px; }
 }
 

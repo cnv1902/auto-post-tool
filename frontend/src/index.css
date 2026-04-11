@@ -56,7 +56,7 @@ body {
   flex-direction: column;
   min-height: 100vh;
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden; /* chỉ ẩn ngang, giữ dọc để scroll được */
 }
 
 /* Animated background orbs */
@@ -86,14 +86,18 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 32px;
+  padding: 0 24px;
   height: 64px;
-  background: rgba(10,12,18,0.8);
+  background: rgba(10,12,18,0.9);
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   position: sticky;
   top: 0;
   z-index: 100;
+  flex-wrap: nowrap; /* desktop: không wrap */
+  gap: 8px;
+  min-width: 0;
 }
 
 .logo {
@@ -113,7 +117,17 @@ body {
 }
 
 /* ─── Tabs ─── */
-.tabs { display: flex; gap: 8px; }
+.tabs {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 2px 0;
+}
+.tabs::-webkit-scrollbar { display: none; }
 
 .tab-btn {
   display: flex;
@@ -162,9 +176,11 @@ body {
 /* ─── Main ─── */
 .app-main {
   flex: 1;
-  padding: 32px;
+  padding: 24px 32px;
   position: relative;
   z-index: 1;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 /* ─── Footer ─── */
@@ -299,41 +315,90 @@ body {
   font-weight: 600;
 }
 
-/* ─── Responsive (Tablet & Mobile) ─── */
+/* ─── Responsive: Tablet ─── */
+@media (max-width: 900px) {
+  .app-header {
+    padding: 0 16px;
+    gap: 6px;
+  }
+  .logo-text {
+    font-size: 1rem;
+  }
+  .tab-btn {
+    padding: 7px 14px;
+    font-size: 0.82rem;
+  }
+}
+
+/* ─── Responsive: Mobile (≤768px) ─── */
 @media (max-width: 768px) {
   .app-header {
     flex-wrap: wrap;
     height: auto;
-    padding: 16px;
-    gap: 16px;
-    justify-content: center;
+    padding: 12px 16px;
+    gap: 10px;
+    justify-content: space-between;
+    align-items: center;
   }
   .app-main {
     padding: 16px;
   }
+  /* Row 1: logo trái, user phải */
   .logo {
-    width: 100%;
-    justify-content: center;
+    order: 0;
+    flex: 1;
   }
+  .header-user {
+    order: 1;
+    padding-left: 0;
+    margin-left: 0;
+    flex-shrink: 0;
+  }
+  /* Row 2: tabs full width */
   .tabs {
+    order: 2;
     width: 100%;
     overflow-x: auto;
-    padding-bottom: 4px;
-    justify-content: flex-start;
+    padding-bottom: 2px;
     -webkit-overflow-scrolling: touch;
-  }
-  .tabs::-webkit-scrollbar {
-    display: none;
+    flex-shrink: 0;
+    gap: 6px;
   }
   .tab-btn {
     white-space: nowrap;
-    padding: 8px 14px;
-    font-size: 0.8rem;
+    padding: 7px 12px;
+    font-size: 0.78rem;
+    gap: 4px;
   }
-  .header-user {
-    width: 100%;
-    justify-content: space-between;
-    padding-left: 0;
-    margin-left: 0;
+  .app-footer {
+    padding: 12px 16px;
+    font-size: 0.72rem;
   }
+}
+
+/* ─── Responsive: Small phone (≤480px) ─── */
+@media (max-width: 480px) {
+  html { font-size: 14px; }
+  .app-header {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .logo-icon { font-size: 1.3rem; }
+  .logo-text { font-size: 0.9rem; }
+  .header-name { display: none; } /* ẩn tên user, giữ avatar + logout */
+  .app-main {
+    padding: 12px;
+  }
+  .tab-btn {
+    padding: 6px 10px;
+    font-size: 0.74rem;
+  }
+}
+
+/* ─── Responsive: Tiny phone (≤360px) ─── */
+@media (max-width: 360px) {
+  html { font-size: 13px; }
+  .app-main { padding: 10px 8px; }
+  .header-avatar { width: 26px; height: 26px; }
+  .btn-logout { padding: 4px 8px; font-size: 0.7rem; }
 }

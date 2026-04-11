@@ -8,6 +8,8 @@
   gap: 12px;
   max-width: 1300px;
   margin: 0 auto;
+  min-width: 0;
+  width: 100%;
 }
 
 /* ── MODE SWITCHER ── */
@@ -47,6 +49,7 @@
   grid-template-columns: 260px 1fr;
   gap: 16px;
   align-items: stretch;
+  min-width: 0;
 }
 
 .top-card-page,
@@ -107,6 +110,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-width: 0;
 }
 
 /* ── Fields trong form ── */
@@ -292,13 +296,33 @@
 }
 
 /* ── Responsive ── */
-@media (max-width: 1100px) {
+@media (max-width: 1200px) {
+  .publish-bottom-row {
+    grid-template-columns: 1fr 1.3fr;
+  }
+}
+
+@media (max-width: 1024px) {
   .publish-top-row {
-    grid-template-columns: 1fr;
-    align-items: start;
+    grid-template-columns: 220px 1fr;
   }
   .publish-bottom-row {
     grid-template-columns: 1fr;
+  }
+  .publish-preview-col {
+    position: relative;
+    top: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .publish-top-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .publish-bottom-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
   }
   .publish-preview-col {
     position: relative;
@@ -310,15 +334,11 @@
   .mode-btn {
     flex: 1;
     text-align: center;
+    padding: 8px 12px;
+    font-size: 0.82rem;
   }
-}
-
-@media (max-width: 768px) {
   .field-row {
     grid-template-columns: 1fr;
-  }
-  .publish-top-row {
-    gap: 12px;
   }
   .scheduling-block {
     flex-direction: column;
@@ -328,5 +348,23 @@
   .schedule-datetime {
     max-width: 100%;
     width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .mode-switcher {
+    padding: 4px;
+    gap: 3px;
+  }
+  .mode-btn {
+    padding: 7px 8px;
+    font-size: 0.75rem;
+  }
+  .single-preview-media {
+    aspect-ratio: 4/3;
+  }
+  .btn-publish {
+    padding: 11px;
+    font-size: 0.85rem;
   }
 }
