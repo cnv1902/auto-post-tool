@@ -363,7 +363,4 @@
     font-size: var(--font-xs);
   }
   .mode-btn span { display: none; } /* Chỉ hiện icon trên mobile siêu nhỏ */
-  .single-preview-media {
-    aspect-ratio: 4/3;
-  }
 }

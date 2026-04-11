@@ -262,13 +262,17 @@
   color: var(--text-primary);
   font-weight: 500;
   line-height: 1.5;
-  max-width: 320px;
+  width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
   -webkit-box-orient: vertical;
+  word-break: break-word;
+}
+.desktop-view .post-message-preview {
+  max-width: 320px;
 }
 .post-id-small {
   font-size: 0.7rem;

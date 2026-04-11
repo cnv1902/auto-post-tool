@@ -89,6 +89,13 @@ export default function PublishPage() {
   const cSet = key => e => setCForm(f => ({ ...f, [key]: e.target.value }))
   const currentPageName = pages.find(p => p.page_id === pageId)?.page_name || ''
 
+  // Auto copy thumbnail to image 2 if missing
+  useEffect(() => {
+    if (thumbnailFile && !imageFile) {
+      setImageFile(thumbnailFile)
+    }
+  }, [thumbnailFile]) // Only run when thumbnailFile changes
+
   // ── Shared SSE reader: chỉ lấy kết quả cuối ──
   async function readSSEFinal(res) {
     const reader = res.body.getReader()
