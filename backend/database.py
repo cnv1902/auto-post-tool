@@ -109,6 +109,19 @@ class Post(Base):
 # ──────────────────────────────────────────────
 def init_db():
     Base.metadata.create_all(bind=engine)
+    
+    # Auto-patch missing columns for older SQLite databases missing migration
+    from sqlalchemy import text
+    with engine.begin() as conn:
+        try:
+            conn.execute(text("ALTER TABLE posts ADD COLUMN scheduled_time INTEGER"))
+        except Exception: pass
+        try:
+            conn.execute(text("ALTER TABLE posts ADD COLUMN payload TEXT"))
+        except Exception: pass
+        try:
+            conn.execute(text("ALTER TABLE posts ADD COLUMN post_type VARCHAR"))
+        except Exception: pass
 
 
 def get_db():
