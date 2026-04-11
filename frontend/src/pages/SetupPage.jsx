@@ -1,4 +1,8 @@
 import { useState } from 'react'
+import {
+  KeyRound, FileText, CheckCircle2, ChevronRight,
+  UserCircle2, AppWindow, Loader2, AlertCircle, CopyCheck
+} from 'lucide-react'
 import './SetupPage.css'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
@@ -37,7 +41,7 @@ export default function SetupPage({ onConfigured }) {
       } else {
         setResult(data)
         if (data.pages?.length > 0) {
-          setTimeout(() => onConfigured(), 1200)
+          setTimeout(() => onConfigured(), 1500)
         }
       }
     } catch (err) {
@@ -48,13 +52,15 @@ export default function SetupPage({ onConfigured }) {
   }
 
   return (
-    <div className="setup-page">
-      <div className="setup-card glass">
+    <div className="setup-page animate-fade-in-up">
+      <div className="setup-card glass-elevated">
         <div className="setup-header">
-          <div className="setup-icon">🔑</div>
+          <div className="setup-icon-wrap">
+            <KeyRound size={32} strokeWidth={2} />
+          </div>
           <h2>Cấu hình Token Facebook</h2>
           <p className="setup-desc">
-            Nhập thông tin xác thực để hệ thống tự động lấy danh sách Fanpage bạn quản lý.
+            Vui lòng cung cấp User Access Token và Ad Account ID để hệ thống có thể đăng bài dưới dạng Dark Post trên các Fanpage của bạn.
           </p>
         </div>
 
@@ -72,7 +78,7 @@ export default function SetupPage({ onConfigured }) {
             />
             <span className="field-hint">
               Lấy tại <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noreferrer">Graph API Explorer</a>
-              &nbsp;— cần quyền: <code>ads_management</code>, <code>pages_show_list</code>
+              {' '}— đảm bảo tick các quyền: <code>ads_management</code>, <code>pages_show_list</code>
             </span>
           </div>
 
@@ -82,53 +88,73 @@ export default function SetupPage({ onConfigured }) {
               id="ad-account"
               type="text"
               className="text-input"
-              placeholder="act_435600390407092"
+              placeholder="act_123456789012345"
               value={adAccountId}
               onChange={e => setAdAccountId(e.target.value)}
               required
             />
-            <span className="field-hint">Dạng <code>act_XXXXXXXXX</code></span>
+            <span className="field-hint">Bắt buộc phải có tiền tố <code>act_</code></span>
           </div>
 
           <button type="submit" className="btn-primary" disabled={loading}>
             {loading ? (
-              <span className="btn-loading"><span className="spinner" />Đang xác thực...</span>
+              <span className="btn-loading"><Loader2 size={18} className="spin-icon" />Đang xác thực & đồng bộ...</span>
             ) : (
-              '✨ Xác thực & Lấy Fanpages'
+              <><CheckCircle2 size={18}/> Xác thực & Lấy danh sách Fanpage</>
             )}
           </button>
         </form>
 
         {error && (
-          <div className="alert alert-error">
-            <span>❌ {error}</span>
+          <div className="alert alert-error mt-3">
+            <AlertCircle size={18} />
+            <span>{error}</span>
           </div>
         )}
 
         {result && (
-          <div className="setup-result">
+          <div className="setup-result mt-4">
+            <h3 className="result-title">Kết quả kết nối</h3>
+            
             <div className="result-user">
-              <span className="user-avatar">👤</span>
-              <span>{result.user.name} <small>(ID: {result.user.id})</small></span>
+              <div className="user-icon"><UserCircle2 size={24} /></div>
+              <div className="user-info">
+                <strong>{result.user.name}</strong>
+                <span>ID: {result.user.id}</span>
+              </div>
+              <div className="status-success"><CheckCircle2 size={18} /> Kết nối thành công</div>
             </div>
 
-            <div className="pages-list">
+            <div className="pages-list-container">
               <div className="pages-list-header">
-                <span>📄 {result.total} Fanpage tìm thấy</span>
+                <span className="pages-count">
+                  <AppWindow size={16} /> Tìm thấy {result.total} Fanpage
+                </span>
                 {result.total > 0 && (
-                  <span className="badge-success">✅ Đang chuyển sang Đăng bài...</span>
+                  <span className="badge badge-success slide-in-text">
+                    <Loader2 size={12} className="spin-icon"/> Đang chuyển hướng...
+                  </span>
                 )}
               </div>
-              {result.pages.map(p => (
-                <div key={p.page_id} className="page-item">
-                  <div className="page-icon">📌</div>
-                  <div className="page-info">
-                    <strong>{p.page_name}</strong>
-                    <small>ID: {p.page_id}</small>
+              
+              <div className="pages-list">
+                {result.pages.map(p => (
+                  <div key={p.page_id} className="page-item">
+                    <div className="page-icon"><FileText size={18} /></div>
+                    <div className="page-info">
+                      <strong>{p.page_name}</strong>
+                      <small>ID: {p.page_id}</small>
+                    </div>
+                    <CopyCheck size={18} className="page-check" />
                   </div>
-                  <span className="page-check">✓</span>
-                </div>
-              ))}
+                ))}
+                {result.pages.length === 0 && (
+                   <div className="empty-pages">
+                     <AlertCircle size={24} opacity={0.5}/>
+                     <p>Không có Fanpage nào được tìm thấy. Vui lòng kiểm tra lại quyền của Token.</p>
+                   </div>
+                )}
+              </div>
             </div>
           </div>
         )}

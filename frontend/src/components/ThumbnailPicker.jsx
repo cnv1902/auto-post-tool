@@ -1,160 +1,136 @@
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { ImagePlus, Images, Loader2, Maximize } from 'lucide-react'
 import './ThumbnailPicker.css'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 export default function ThumbnailPicker({ videoFile, onThumbnailReady }) {
   const [frames, setFrames] = useState([])
-  const [selectedIdx, setSelectedIdx] = useState(-1)
-  const [extracting, setExtracting] = useState(false)
-  const [customFile, setCustomFile] = useState(null)
-  const [customPreview, setCustomPreview] = useState(null)
-  const [error, setError] = useState(null)
-  const fileRef = useRef(null)
+  const [selectedIdx, setSelectedIdx] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [customThumb, setCustomThumb] = useState(null)
+  
+  // Ref for the hidden file input (for custom thumbnail)
+  const customInputRef = useRef(null)
 
-  // Khi videoFile thay đổi → extract frames
   useEffect(() => {
     if (!videoFile) {
       setFrames([])
-      setSelectedIdx(-1)
-      setCustomFile(null)
-      setCustomPreview(null)
-      setError(null)
+      setSelectedIdx(0)
+      setCustomThumb(null)
+      onThumbnailReady(null)
       return
     }
 
-    let cancelled = false
+    setLoading(true)
+    const fd = new FormData()
+    fd.append('video_file', videoFile)
 
-    async function extract() {
-      setExtracting(true)
-      setError(null)
-      setFrames([])
-      setSelectedIdx(-1)
-      setCustomFile(null)
-      setCustomPreview(null)
-
-      try {
-        const fd = new FormData()
-        fd.append('video', videoFile)
-
-        const res = await fetch(`${API}/api/video/extract-frames`, {
-          method: 'POST',
-          body: fd,
-        })
-
-        if (!res.ok) {
-          const d = await res.json()
-          throw new Error(d.detail || 'Không thể trích xuất frame')
+    fetch(`${API}/api/tools/extract-frames`, {
+      method: 'POST',
+      body: fd
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.frames) {
+          setFrames(data.frames)
+          setSelectedIdx(0) // Mặc định chọn frame 0
         }
-
-        const data = await res.json()
-        if (!cancelled) {
-          setFrames(data.frames || [])
-          // Tự chọn frame giữa làm mặc định
-          if (data.frames?.length > 0) {
-            const mid = Math.floor(data.frames.length / 2)
-            setSelectedIdx(mid)
-            // Convert base64 to File object
-            const blob = await (await fetch(data.frames[mid])).blob()
-            const file = new File([blob], 'thumbnail.jpg', { type: 'image/jpeg' })
-            onThumbnailReady(file)
-          }
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err.message)
-        }
-      } finally {
-        if (!cancelled) setExtracting(false)
-      }
-    }
-
-    extract()
-    return () => { cancelled = true }
+      })
+      .catch(err => console.error('Lỗi khi extract frames:', err))
+      .finally(() => setLoading(false))
   }, [videoFile])
 
-  // Chọn 1 frame
-  async function selectFrame(idx) {
-    setSelectedIdx(idx)
-    setCustomFile(null)
-    setCustomPreview(null)
-    // Convert base64 frame to File
-    try {
-      const blob = await (await fetch(frames[idx])).blob()
-      const file = new File([blob], `frame_${idx}.jpg`, { type: 'image/jpeg' })
-      onThumbnailReady(file)
-    } catch (e) {
-      console.error('Failed to convert frame:', e)
+  // Convert frame b64 / custom file => File object để gửi lên server
+  useEffect(() => {
+    if (customThumb) {
+      onThumbnailReady(customThumb)
+      return
     }
-  }
 
-  // Upload ảnh tùy chọn
-  function handleCustomUpload(e) {
-    const file = e.target.files[0]
-    if (!file) return
-    setCustomFile(file)
-    setSelectedIdx(-1)
-    setCustomPreview(URL.createObjectURL(file))
-    onThumbnailReady(file)
+    if (frames.length > 0) {
+      const b64Data = frames[selectedIdx].split(',')[1]
+      const byteCharacters = atob(b64Data)
+      const byteNumbers = new Array(byteCharacters.length)
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i)
+      }
+      const byteArray = new Uint8Array(byteNumbers)
+      const blob = new Blob([byteArray], { type: 'image/jpeg' })
+      const thumbFile = new File([blob], 'thumbnail.jpg', { type: 'image/jpeg' })
+      onThumbnailReady(thumbFile)
+    }
+  }, [frames, selectedIdx, customThumb, onThumbnailReady])
+
+  function handleCustomThumbChange(e) {
+    const f = e.target.files[0]
+    if (f) {
+      setCustomThumb(f)
+      setSelectedIdx(-1) // Bỏ chọn frame auto
+    }
   }
 
   if (!videoFile) return null
 
   return (
-    <div className="thumb-picker">
+    <div className="thumb-picker animate-fade-in">
       <div className="thumb-picker-header">
-        <span className="thumb-picker-title">🖼️ Chọn Thumbnail</span>
-        {extracting && (
-          <span className="thumb-extracting">
-            <span className="spinner-sm" />
-            Đang trích xuất...
-          </span>
-        )}
+        <label className="thumb-picker-title"><Images size={16}/> Chọn Thumbnail</label>
+        {loading && <span className="thumb-loading"><Loader2 size={12} className="spin-icon" /> Đang trích xuất...</span>}
       </div>
 
-      {error && (
-        <div className="thumb-error">⚠️ {error}</div>
-      )}
-
-      {frames.length > 0 && (
-        <div className="thumb-grid">
-          {frames.map((src, i) => (
-            <div
-              key={i}
-              className={`thumb-frame ${selectedIdx === i ? 'selected' : ''}`}
-              onClick={() => selectFrame(i)}
-            >
-              <img src={src} alt={`Frame ${i + 1}`} />
-              <span className="thumb-frame-num">#{i + 1}</span>
-              {selectedIdx === i && <span className="thumb-check">✓</span>}
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="thumb-custom-row">
-        <button
-          className="thumb-custom-btn"
-          onClick={() => fileRef.current?.click()}
-          type="button"
+      <div className="thumb-list">
+        {/* Nút Upload Custom Thumbnail */}
+        <div
+          className={`thumb-item custom-thumb-btn ${selectedIdx === -1 && customThumb ? 'active' : ''}`}
+          onClick={() => customInputRef.current?.click()}
         >
-          📁 Tải ảnh khác
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/jpeg,image/png,image/*"
-          style={{ display: 'none' }}
-          onChange={handleCustomUpload}
-        />
-        {customPreview && (
-          <div className={`thumb-frame custom-thumb selected`}>
-            <img src={customPreview} alt="Custom" />
-            <span className="thumb-frame-num">Tùy chọn</span>
-            <span className="thumb-check">✓</span>
+          {customThumb ? (
+            <img src={URL.createObjectURL(customThumb)} alt="Custom" className="thumb-img" />
+          ) : (
+             <>
+               <input
+                 type="file"
+                 ref={customInputRef}
+                 accept="image/*"
+                 style={{ display: 'none' }}
+                 onChange={handleCustomThumbChange}
+               />
+               <ImagePlus size={20} className="text-muted"/>
+               <span style={{fontSize: '0.65rem', color: 'var(--text-muted)'}}>Tải ảnh lên</span>
+             </>
+          )}
+          <div className="thumb-overlay">
+            <Maximize size={16}/>
           </div>
-        )}
+        </div>
+
+        {/* Danh sách 10 frames tự động */}
+        {!loading && frames.map((b64, idx) => (
+          <div
+            key={idx}
+            className={`thumb-item ${selectedIdx === idx ? 'active' : ''}`}
+            onClick={() => {
+              setSelectedIdx(idx)
+              setCustomThumb(null)
+            }}
+          >
+            <img src={b64} alt={`Frame ${idx}`} className="thumb-img" />
+            <div className="thumb-overlay">
+               {selectedIdx === idx ? <CheckCircle2 size={16} color="var(--success)"/> : <Maximize size={16}/>}
+            </div>
+          </div>
+        ))}
+        
+        {/* Placeholder khi đang loading */}
+        {loading && Array(5).fill(0).map((_, i) => (
+          <div key={i} className="thumb-item skeleton" />
+        ))}
       </div>
     </div>
   )
+}
+
+function CheckCircle2(props) {
+    return <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
 }

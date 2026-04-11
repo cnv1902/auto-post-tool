@@ -1,53 +1,72 @@
-/* App.css — reset Vite defaults */
-#root { min-height: 100vh; }
+/* ═══════════════════════════════════════
+   App.css — Header User Section
+   ═══════════════════════════════════════ */
 
-/* ── Header user section ── */
+/* ── Header user area ── */
 .header-user {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-3);
   margin-left: auto;
-  padding-left: 16px;
+  padding-left: var(--space-4);
 }
 
 .header-avatar {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: 2px solid var(--border);
+  object-fit: cover;
+  transition: border-color var(--transition);
+}
+.header-avatar:hover {
+  border-color: var(--accent);
 }
 
 .header-name {
-  font-size: 0.82rem;
+  font-size: var(--font-sm);
   font-weight: 600;
   color: var(--text-secondary);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .header-admin-badge {
-  font-size: 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  padding: 2px 8px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--accent), #f76a8a);
-  color: #fff;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: var(--text-on-accent);
+  box-shadow: 0 2px 8px var(--accent-glow);
 }
 
 .btn-logout {
-  padding: 5px 12px;
-  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: var(--font-xs);
   font-weight: 600;
   cursor: pointer;
-  transition: var(--transition);
-  font-family: 'Inter', sans-serif;
+  transition: all var(--transition);
+  font-family: inherit;
+  min-height: 32px;
 }
+.btn-logout svg { width: 14px; height: 14px; }
 .btn-logout:hover {
-  border-color: #ef4444;
-  color: #ef4444;
-  background: rgba(239,68,68,0.08);
+  border-color: var(--error-border);
+  color: var(--error);
+  background: var(--error-bg);
 }

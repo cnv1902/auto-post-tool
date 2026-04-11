@@ -1,4 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
+import {
+  Users, Smartphone, Plus, Settings2, Trash2, Edit3, Shield, UserCircle2,
+  CalendarDays, Activity, Globe, RefreshCcw, Lock
+} from 'lucide-react'
 import './AdminPage.css'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
@@ -95,40 +99,45 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="admin-page">
-      <div className="admin-header">
-        <h2>🔧 Admin Dashboard</h2>
+    <div className="admin-page animate-fade-in-up">
+      <div className="admin-header glass-elevated">
+        <div className="admin-header-title">
+           <Settings2 size={24} className="text-accent"/>
+           <h2>Quản trị hệ thống</h2>
+        </div>
         <div className="admin-tabs">
           <button
             className={`admin-tab ${tab === 'users' ? 'active' : ''}`}
             onClick={() => setTab('users')}
           >
-            👥 Users ({users.length})
+            <Users size={16} />
+            Người dùng <span className="tab-badge">{users.length}</span>
           </button>
           <button
             className={`admin-tab ${tab === 'apps' ? 'active' : ''}`}
             onClick={() => setTab('apps')}
           >
-            📱 Facebook Apps ({apps.length})
+            <Smartphone size={16} />
+            Facebook Apps <span className="tab-badge">{apps.length}</span>
           </button>
         </div>
       </div>
 
       {/* ── USERS TAB ── */}
       {tab === 'users' && (
-        <div className="admin-section">
-          <div className="admin-table-wrapper">
+        <div className="admin-section animate-fade-in">
+          <div className="admin-table-wrapper glass">
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>User</th>
-                  <th>FB ID</th>
+                  <th>Người dùng</th>
+                  <th>Facebook ID</th>
                   <th>Ad Account</th>
-                  <th>Pages</th>
-                  <th>Posts</th>
-                  <th>Role</th>
-                  <th>Ngày tạo</th>
-                  <th>Actions</th>
+                  <th><Globe size={14}/> Pages</th>
+                  <th><Activity size={14}/> Bài đăng</th>
+                  <th>Phân quyền</th>
+                  <th><CalendarDays size={14}/> Đăng ký lúc</th>
+                  <th>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
@@ -137,35 +146,35 @@ export default function AdminPage() {
                     <td>
                       <div className="user-cell">
                         <img src={u.avatar_url || 'https://ui-avatars.com/api/?name=' + u.name} alt="" className="user-avatar-sm" />
-                        <span>{u.name}</span>
+                        <strong>{u.name}</strong>
                       </div>
                     </td>
                     <td><code className="text-muted">{u.fb_user_id}</code></td>
                     <td>
                       {u.can_use_ads
-                        ? <span className="badge badge-success">✅ {u.ad_account_id}</span>
+                        ? <span className="badge badge-success"><CheckCircle2 size={12}/> {u.ad_account_id}</span>
                         : <span className="badge badge-muted">—</span>
                       }
                     </td>
-                    <td>{u.pages_count}</td>
-                    <td>{u.posts_count}</td>
+                    <td><strong>{u.pages_count}</strong></td>
+                    <td><strong>{u.posts_count}</strong></td>
                     <td>
                       <span className={`badge ${u.is_admin ? 'badge-admin' : 'badge-user'}`}>
-                        {u.is_admin ? '👑 Admin' : '👤 User'}
+                        {u.is_admin ? <><Shield size={12}/> Admin</> : <><UserCircle2 size={12}/> User</>}
                       </span>
                     </td>
                     <td className="text-muted">{u.created_at?.split('T')[0]}</td>
                     <td>
                       <div className="action-btns">
-                        <button className="btn-sm btn-danger" onClick={() => deleteUser(u.id, u.name)}>
-                          Xóa
+                        <button className="btn-icon-action danger" onClick={() => deleteUser(u.id, u.name)} title="Xóa người dùng">
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     </td>
                   </tr>
                 ))}
                 {users.length === 0 && (
-                  <tr><td colSpan={8} className="empty-row">Chưa có user nào</td></tr>
+                  <tr><td colSpan={8} className="empty-row">Chưa có người dùng nào (ngoài admin mặc định)</td></tr>
                 )}
               </tbody>
             </table>
@@ -175,17 +184,20 @@ export default function AdminPage() {
 
       {/* ── APPS TAB ── */}
       {tab === 'apps' && (
-        <div className="admin-section">
+        <div className="admin-section animate-fade-in">
           {/* Form thêm/sửa App */}
-          <form className="app-form section-card" onSubmit={saveApp}>
-            <h3>{editingApp ? '✏️ Sửa Facebook App' : '➕ Thêm Facebook App mới'}</h3>
+          <form className="app-form section-card glass" onSubmit={saveApp}>
+            <h3 className="section-title">
+                {editingApp ? <Edit3 size={18}/> : <Plus size={18}/>}
+                <span>{editingApp ? 'Sửa thông tin Facebook App' : 'Thêm Facebook App mới'}</span>
+            </h3>
             <div className="app-form-fields">
               <div className="field-group">
                 <label>App ID</label>
                 <input
                   type="text"
                   className="text-input"
-                  placeholder="123456789..."
+                  placeholder="Ví dụ: 1234567890123"
                   value={appForm.app_id}
                   onChange={e => setAppForm(f => ({ ...f, app_id: e.target.value }))}
                   required
@@ -197,74 +209,92 @@ export default function AdminPage() {
                 <input
                   type="password"
                   className="text-input"
-                  placeholder="abc123def456..."
+                  placeholder="Ví dụ: abc123def456..."
                   value={appForm.app_secret}
                   onChange={e => setAppForm(f => ({ ...f, app_secret: e.target.value }))}
                   required={!editingApp}
                 />
               </div>
               <div className="field-group">
-                <label>Tên hiển thị</label>
+                <label>Tên hiển thị (Tùy chọn)</label>
                 <input
                   type="text"
                   className="text-input"
-                  placeholder="My FB App"
+                  placeholder="Ví dụ: Công cụ Đăng Bài"
                   value={appForm.app_name}
                   onChange={e => setAppForm(f => ({ ...f, app_name: e.target.value }))}
                 />
               </div>
             </div>
             <div className="app-form-actions">
-              <button type="submit" className="btn-primary" disabled={loading}>
-                {editingApp ? '💾 Cập nhật' : '➕ Thêm'}
+              <button type="submit" className="btn-primary" disabled={loading} style={{width: 'auto'}}>
+                {loading ? <RefreshCcw size={16} className="spin-icon"/> : editingApp ? <Edit3 size={16}/> : <Plus size={16}/>}
+                <span>{editingApp ? 'Cập nhật App' : 'Thêm App Mới'}</span>
               </button>
               {editingApp && (
-                <button type="button" className="btn-outline" onClick={() => { setEditingApp(null); setAppForm({ app_id: '', app_secret: '', app_name: '' }) }}>
-                  Hủy
+                <button type="button" className="btn-ghost" onClick={() => { setEditingApp(null); setAppForm({ app_id: '', app_secret: '', app_name: '' }) }}>
+                  Hủy thao tác
                 </button>
               )}
             </div>
           </form>
 
           {/* Danh sách Apps */}
-          <div className="admin-table-wrapper">
+          <div className="admin-table-wrapper glass">
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>App Name</th>
+                  <th>Tên Facebook App</th>
                   <th>App ID</th>
                   <th>App Secret</th>
-                  <th>Status</th>
+                  <th>Cấp phép API</th>
                   <th>Ngày tạo</th>
-                  <th>Actions</th>
+                  <th>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
                 {apps.map(a => (
                   <tr key={a.id}>
-                    <td><strong>{a.app_name}</strong></td>
-                    <td><code>{a.app_id}</code></td>
-                    <td><code className="text-muted">{a.app_secret}</code></td>
+                    <td>
+                        <div className="user-cell">
+                            <div className="app-icon-placeholder"><Smartphone size={16} /></div>
+                            <strong>{a.app_name || '—'}</strong>
+                        </div>
+                    </td>
+                    <td><code className="text-muted">{a.app_id}</code></td>
+                    <td>
+                        <div style={{display: 'flex', alignItems: 'center', gap: 4}}>
+                            <Lock size={12} className="text-muted"/>
+                            <code className="text-muted" style={{filter: 'blur(3px)', transition: 'filter 0.2s', cursor: 'pointer'}} onMouseOver={e=>e.currentTarget.style.filter='none'} onMouseOut={e=>e.currentTarget.style.filter='blur(3px)'}>
+                                {a.app_secret}
+                            </code>
+                        </div>
+                    </td>
                     <td>
                       <span className={`badge ${a.is_active ? 'badge-success' : 'badge-muted'}`}>
-                        {a.is_active ? '🟢 Active' : '⏸ Inactive'}
+                        {a.is_active ? 'Đã kích hoạt' : 'Chưa kích hoạt'}
                       </span>
                     </td>
                     <td className="text-muted">{a.created_at?.split('T')[0]}</td>
                     <td>
                       <div className="action-btns">
-                        <button className="btn-sm btn-outline" onClick={() => startEditApp(a)}>
-                          Sửa
+                        <button className="btn-icon-action" onClick={() => startEditApp(a)} title="Sửa thông tin">
+                          <Edit3 size={16} />
                         </button>
-                        <button className="btn-sm btn-danger" onClick={() => deleteApp(a.id, a.app_name)}>
-                          Xóa
+                        <button className="btn-icon-action danger" onClick={() => deleteApp(a.id, a.app_name)} title="Xóa Facebook App">
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     </td>
                   </tr>
                 ))}
                 {apps.length === 0 && (
-                  <tr><td colSpan={6} className="empty-row">Chưa có Facebook App nào. Hãy thêm App để user có thể đăng nhập.</td></tr>
+                  <tr>
+                      <td colSpan={6} className="empty-row" style={{padding: '40px 20px !important'}}>
+                          <Smartphone size={32} opacity={0.3} style={{marginBottom: 10}}/>
+                          <div>Hệ thống chưa có kết nối Facebook App nào.</div>
+                      </td>
+                  </tr>
                 )}
               </tbody>
             </table>
@@ -273,4 +303,8 @@ export default function AdminPage() {
       )}
     </div>
   )
+}
+
+function CheckCircle2(props) {
+    return <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
 }

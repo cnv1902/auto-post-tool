@@ -1,4 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
+import {
+  Megaphone, Settings, PenSquare, LayoutList, Lock,
+  LogOut, Wrench, ArrowLeft, ShieldCheck, Loader2,
+  KeyRound, ArrowRight
+} from 'lucide-react'
 import LoginPage from './pages/LoginPage'
 import SetupPage from './pages/SetupPage'
 import PublishPage from './pages/PublishPage'
@@ -101,8 +106,8 @@ function UserApp() {
   if (currentUser === null) {
     return (
       <div className="app">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
-          <div className="spinner" style={{ width: 32, height: 32 }} />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: 12 }}>
+          <Loader2 size={28} className="spin-icon" style={{ color: 'var(--accent)' }} />
         </div>
       </div>
     )
@@ -116,34 +121,46 @@ function UserApp() {
     <div className="app">
       <header className="app-header">
         <div className="logo">
-          <span className="logo-icon">📣</span>
+          <div className="logo-icon">
+            <Megaphone size={20} />
+          </div>
           <span className="logo-text">Auto Post Tool</span>
         </div>
         <nav className="tabs">
           <button className={`tab-btn ${tab === 'setup' ? 'active' : ''}`} onClick={() => setTab('setup')}>
-            ⚙️ Cấu hình Token
+            <Settings size={16} />
+            <span>Cấu hình</span>
           </button>
           <button
             className={`tab-btn ${tab === 'publish' ? 'active' : ''}`}
             onClick={() => setTab('publish')}
             disabled={!configured}
           >
-            📝 Đăng bài
-            {!configured && <span className="tab-lock">🔒</span>}
+            <PenSquare size={16} />
+            <span>Đăng bài</span>
+            {!configured && <Lock size={12} className="tab-lock" />}
           </button>
           <button
             className={`tab-btn ${tab === 'posts' ? 'active' : ''}`}
             onClick={() => setTab('posts')}
             disabled={!configured}
           >
-            📋 Quản lý
-            {!configured && <span className="tab-lock">🔒</span>}
+            <LayoutList size={16} />
+            <span>Quản lý</span>
+            {!configured && <Lock size={12} className="tab-lock" />}
           </button>
         </nav>
         <div className="header-user">
-          <img src={currentUser.avatar_url || `https://ui-avatars.com/api/?name=${currentUser.name}`} alt="" className="header-avatar" />
+          <img
+            src={currentUser.avatar_url || `https://ui-avatars.com/api/?name=${currentUser.name}`}
+            alt=""
+            className="header-avatar"
+          />
           <span className="header-name">{currentUser.name}</span>
-          <button className="btn-logout" onClick={handleLogout}>Đăng xuất</button>
+          <button className="btn-logout" onClick={handleLogout}>
+            <LogOut size={14} />
+            <span>Thoát</span>
+          </button>
         </div>
       </header>
       <main className="app-main">
@@ -216,7 +233,7 @@ function AdminApp() {
     return (
       <div className="app">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
-          <div className="spinner" style={{ width: 32, height: 32 }} />
+          <Loader2 size={28} className="spin-icon" style={{ color: 'var(--accent)' }} />
         </div>
       </div>
     )
@@ -225,36 +242,55 @@ function AdminApp() {
   if (state === 'login') {
     return (
       <div className="login-page">
-        <div className="login-card glass">
-          <div className="login-logo">
-            <span className="login-icon">🔧</span>
-            <h1>Auto Post Tool Admin</h1>
-            <p className="login-subtitle">Quản trị hệ thống</p>
-          </div>
-          <form className="login-body" onSubmit={handleLogin} style={{ gap: 14 }}>
-            <div className="field-group">
-              <label htmlFor="admin-pw">Mật khẩu quản trị</label>
-              <input
-                id="admin-pw"
-                type="password"
-                className="text-input"
-                placeholder="Nhập mật khẩu..."
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                autoFocus
-                required
-              />
-            </div>
-            {error && <div className="alert alert-error">❌ {error}</div>}
-            <button type="submit" className="btn-primary" disabled={logging} style={{ width: '100%', padding: '12px' }}>
-              {logging ? <span className="btn-loading"><span className="spinner" />Đang xác thực...</span> : '🔑 Đăng nhập'}
-            </button>
-            <div style={{ textAlign: 'center', marginTop: 8 }}>
-              <a href="/" style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>← Về trang chính</a>
-            </div>
-          </form>
+        <div className="login-bg">
+          <div className="login-orb login-orb-1" />
+          <div className="login-orb login-orb-2" />
+          <div className="login-grid-overlay" />
         </div>
-        <div className="login-bg-decor"></div>
+        <div className="login-container">
+          <div className="login-card glass-elevated">
+            <div className="login-logo">
+              <div className="login-logo-icon" style={{ background: 'linear-gradient(135deg, #f59e0b, #ef4444)' }}>
+                <Wrench size={28} />
+              </div>
+              <h1 className="login-title">Admin Panel</h1>
+              <p className="login-subtitle">Quản trị hệ thống</p>
+            </div>
+            <form className="login-body" onSubmit={handleLogin}>
+              <div className="field-group">
+                <label htmlFor="admin-pw">Mật khẩu quản trị</label>
+                <input
+                  id="admin-pw"
+                  type="password"
+                  className="text-input"
+                  placeholder="Nhập mật khẩu..."
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  autoFocus
+                  required
+                />
+              </div>
+              {error && (
+                <div className="alert alert-error">
+                  <span>{error}</span>
+                </div>
+              )}
+              <button type="submit" className="btn-primary" disabled={logging}>
+                {logging ? (
+                  <span className="btn-loading"><Loader2 size={18} className="spin-icon" />Đang xác thực...</span>
+                ) : (
+                  <><KeyRound size={18} /> Đăng nhập</>
+                )}
+              </button>
+              <div style={{ textAlign: 'center' }}>
+                <a href="/" className="login-back-link">
+                  <ArrowLeft size={14} />
+                  <span>Về trang chính</span>
+                </a>
+              </div>
+            </form>
+          </div>
+        </div>
       </div>
     )
   }
@@ -264,15 +300,26 @@ function AdminApp() {
     <div className="app">
       <header className="app-header">
         <div className="logo">
-          <span className="logo-icon">🔧</span>
-          <span className="logo-text">Auto Post Tool Admin</span>
+          <div className="logo-icon" style={{ background: 'linear-gradient(135deg, #f59e0b, #ef4444)' }}>
+            <Wrench size={20} />
+          </div>
+          <span className="logo-text">Admin Panel</span>
         </div>
         <nav className="tabs">
-          <a href="/" className="tab-btn">← Trang chính</a>
+          <a href="/" className="tab-btn">
+            <ArrowLeft size={16} />
+            <span>Trang chính</span>
+          </a>
         </nav>
         <div className="header-user">
-          <span className="header-admin-badge">Admin</span>
-          <button className="btn-logout" onClick={handleLogout}>Đăng xuất</button>
+          <span className="header-admin-badge">
+            <ShieldCheck size={12} />
+            Admin
+          </span>
+          <button className="btn-logout" onClick={handleLogout}>
+            <LogOut size={14} />
+            <span>Thoát</span>
+          </button>
         </div>
       </header>
       <main className="app-main">

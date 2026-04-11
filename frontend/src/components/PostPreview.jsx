@@ -1,194 +1,186 @@
-import { useMemo, useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { MoreHorizontal, X, ThumbsUp, MessageCircle, Share, Globe, ChevronLeft, ChevronRight, Play } from 'lucide-react'
 import './PostPreview.css'
 
 export default function PostPreview({ form, videoFile, thumbnailFile, imageFile, pageName }) {
-  const [activeCard, setActiveCard] = useState(0)
-  const trackRef = useRef(null)
+  const [currentSlide, setCurrentSlide] = useState(0)
+  const videoRef = useRef(null)
 
-  const videoUrl = useMemo(() => videoFile ? URL.createObjectURL(videoFile) : null, [videoFile])
-  const thumbUrl = useMemo(() => thumbnailFile ? URL.createObjectURL(thumbnailFile) : null, [thumbnailFile])
-  const imageUrl = useMemo(() => imageFile ? URL.createObjectURL(imageFile) : null, [imageFile])
-
-  const getCtaLabel = (val) => {
-    const map = {
-      'LEARN_MORE': 'Tìm hiểu thêm', 'SHOP_NOW': 'Mua ngay', 'SIGN_UP': 'Đăng ký',
-      'DOWNLOAD': 'Tải xuống', 'BOOK_NOW': 'Đặt lịch', 'CONTACT_US': 'Liên hệ',
-      'GET_QUOTE': 'Nhận báo giá', 'GET_OFFER': 'Nhận ưu đãi', 'ORDER_NOW': 'Đặt hàng ngay',
-      'APPLY_NOW': 'Ứng tuyển', 'WATCH_MORE': 'Xem thêm', 'LISTEN_NOW': 'Nghe ngay',
-      'CALL_NOW': 'Gọi ngay', 'PLAY_GAME': 'Chơi game', 'USE_APP': 'Dùng ứng dụng',
-      'SEND_MESSAGE': 'Gửi tin nhắn', 'WHATSAPP_MESSAGE': 'Nhắn tin WhatsApp',
-      'SUBSCRIBE': 'Đăng ký', 'NO_BUTTON': null
+  // Auto-play / pause video in carousel based on visibility
+  useEffect(() => {
+    if (currentSlide === 0 && videoRef.current) {
+      videoRef.current.play().catch(() => {})
+    } else if (currentSlide !== 0 && videoRef.current) {
+      videoRef.current.pause()
     }
-    return map[val] || 'Mở liên kết'
+  }, [currentSlide])
+
+  // Get CTA text properly
+  const getCtaLabel = (type) => {
+    if (!type || type === 'NO_BUTTON') return ''
+    const map = {
+      LEARN_MORE: 'Tìm hiểu thêm',
+      SHOP_NOW: 'Mua ngay',
+      SIGN_UP: 'Đăng ký',
+      DOWNLOAD: 'Tải xuống',
+      BOOK_NOW: 'Đặt lịch ngay',
+      CONTACT_US: 'Liên hệ chúng tôi',
+      SEND_MESSAGE: 'Gửi tin nhắn',
+      WATCH_MORE: 'Xem thêm',
+      LISTEN_NOW: 'Nghe ngay',
+      USE_APP: 'Sử dụng ứng dụng',
+      PLAY_GAME: 'Chơi trò chơi',
+      GET_QUOTE: 'Nhận báo giá',
+      GET_OFFER: 'Nhận ưu đãi',
+      ORDER_NOW: 'Đặt hàng ngay',
+      APPLY_NOW: 'Ứng tuyển ngay',
+      CALL_NOW: 'Gọi ngay',
+      WHATSAPP_MESSAGE: 'Gửi tin nhắn WhatsApp',
+      SUBSCRIBE: 'Đăng ký theo dõi',
+    }
+    return map[type] || 'Tìm hiểu thêm'
   }
 
-  const cards = [
-    {
-      media: videoFile ? (
-        <video
-          src={videoUrl}
-          poster={thumbUrl || undefined}
-          muted loop playsInline
-          onMouseEnter={e => e.target.play()}
-          onMouseLeave={e => { e.target.pause(); e.target.currentTime = 0 }}
-        />
-      ) : thumbUrl ? (
-        <img src={thumbUrl} alt="Thumbnail" />
-      ) : (
-        <div className="fb-card-empty"><span>🎬</span><small>Video Card 1</small></div>
-      ),
-      showPlay: !!(videoFile || thumbUrl),
-      title: form.card1Title || 'Chi tiết sản phẩm 👉',
-      desc: form.card1Desc,
-      cta: form.card1Cta,
-    },
-    {
-      media: imageUrl ? (
-        <img src={imageUrl} alt="Card 2" />
-      ) : (
-        <div className="fb-card-empty"><span>🖼️</span><small>Ảnh Card 2</small></div>
-      ),
-      showPlay: false,
-      title: form.card2Title || 'Xem thêm tại đây 👉',
-      desc: form.card2Desc,
-      cta: form.card2Cta,
-    },
-  ]
+  const handleNext = () => setCurrentSlide(1)
+  const handlePrev = () => setCurrentSlide(0)
 
-  const goTo = (idx) => setActiveCard(Math.max(0, Math.min(cards.length - 1, idx)))
+  // Determine hostname for links
+  const getDomain = (url) => {
+    if (!url) return ''
+    try {
+      return new URL(url).hostname.replace('www.', '').toUpperCase()
+    } catch {
+      return 'TRANG WEB'
+    }
+  }
 
   return (
-    <div className="post-preview">
-      <div className="preview-label">👁 Xem trước bài viết</div>
-
-      <div className="fb-mock">
-
-        {/* ── Header ── */}
-        <div className="fb-header">
-          <div className="fb-avatar">
-            <img
-              src={`https://ui-avatars.com/api/?name=${encodeURIComponent(pageName || 'P')}&background=4267B2&color=fff&bold=true`}
-              alt="avatar"
-            />
-          </div>
-          <div className="fb-header-info">
-            <div className="fb-page-name">{pageName || 'Tên Fanpage'}</div>
-            <div className="fb-post-meta">8 giờ · <span>🌐</span></div>
-          </div>
-          <div className="fb-dots">···</div>
+    <div className="fb-preview-card animate-fade-in">
+      {/* ── HEADER ── */}
+      <div className="fb-header">
+        <div className="fb-avatar">
+            <span className="fb-avatar-text">{pageName ? pageName.charAt(0) : 'F'}</span>
         </div>
-
-        {/* ── Caption ── */}
-        <div className="fb-caption">
-          {form.message || <span className="fb-caption-empty">Nội dung caption sẽ hiển thị ở đây...</span>}
+        <div className="fb-meta">
+          <div className="fb-name">{pageName || 'Tên Fanpage của bạn'}</div>
+          <div className="fb-time">
+            Được tài trợ <Globe size={12} className="fb-icon-small" />
+          </div>
         </div>
+        <div className="fb-options">
+          <MoreHorizontal size={20} />
+          <X size={20} className="close-icon" />
+        </div>
+      </div>
 
-        {/* ── Carousel ── */}
-        <div className="fb-carousel-shell">
-          {/* Cards track natively horizontally scrollable */}
-          <div
-            className="fb-cards-track"
-            ref={trackRef}
-            onScroll={(e) => {
-              // Update dot on manual scroll
-              const scrollLeft = e.target.scrollLeft;
-              const width = e.target.clientWidth;
-              const idx = Math.round(scrollLeft / width);
-              if (idx !== activeCard && idx >= 0 && idx < cards.length) {
-                setActiveCard(idx);
-              }
-            }}
-          >
-            {cards.map((card, i) => (
-              <div key={i} className="fb-card">
-                {/* Media */}
-                <div className="fb-card-media">
-                  {card.media}
-                  {card.showPlay && (
-                    <div className="fb-play-overlay">
-                      <div className="fb-play-circle">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
-                          <path d="M8 5v14l11-7z"/>
-                        </svg>
-                      </div>
+      {/* ── CAPTION ── */}
+      <div className="fb-caption">
+        {form.message ? (
+          form.message.split('\n').map((line, i) => (
+            <span key={i}>
+              {line}
+              <br />
+            </span>
+          ))
+        ) : (
+          <span style={{ color: 'var(--text-muted)' }}>Nhập nội dung bài viết...</span>
+        )}
+      </div>
+
+      {/* ── CONTENT AREA (CAROUSEL) ── */}
+      <div className="fb-carousel-container">
+        <div
+          className="fb-carousel-track"
+          style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+        >
+          {/* Card 1: Video */}
+          <div className="fb-carousel-slide">
+            <div className="fb-card">
+              <div className="fb-card-media-wrapper">
+                  {videoFile ? (
+                    <video
+                      ref={videoRef}
+                      className="fb-card-media"
+                      src={URL.createObjectURL(videoFile)}
+                      muted
+                      loop
+                      playsInline
+                    />
+                  ) : thumbnailFile ? (
+                    <img className="fb-card-media" src={URL.createObjectURL(thumbnailFile)} alt="" />
+                  ) : (
+                    <div className="fb-card-placeholder">
+                      <Play size={48} opacity={0.2} />
                     </div>
                   )}
-                </div>
-
-                {/* Footer: title+desc LEFT, button RIGHT */}
-                <div className="fb-card-footer">
-                  <div className="fb-card-text">
-                    <div className="fb-card-title">{card.title}</div>
-                    {card.desc && <div className="fb-card-desc">{card.desc}</div>}
-                  </div>
-                  {card.cta !== 'NO_BUTTON' && (
-                    <button className="fb-cta-btn" tabIndex={-1}>{getCtaLabel(card.cta)}</button>
-                  )}
-                </div>
               </div>
-            ))}
+              <div className="fb-card-info">
+                <div className="fb-card-text">
+                  <div className="fb-domain">{getDomain(form.card1Link)}</div>
+                  <div className="fb-title">{form.card1Title || 'Tiêu đề thẻ 1'}</div>
+                  {form.card1Desc && <div className="fb-desc">{form.card1Desc}</div>}
+                </div>
+                {form.card1Cta && form.card1Cta !== 'NO_BUTTON' && (
+                  <button className="fb-cta-btn">{getCtaLabel(form.card1Cta)}</button>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* Next button */}
-          {activeCard < cards.length - 1 && (
-            <button className="fb-nav-btn fb-nav-next" onClick={() => {
-              const el = trackRef.current;
-              if (el) el.scrollBy({ left: el.clientWidth * 0.85, behavior: 'smooth' });
-            }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="#333">
-                <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/>
-              </svg>
-            </button>
-          )}
-
-          {/* Prev button */}
-          {activeCard > 0 && (
-            <button className="fb-nav-btn fb-nav-prev" onClick={() => {
-              const el = trackRef.current;
-              if (el) el.scrollBy({ left: -el.clientWidth * 0.85, behavior: 'smooth' });
-            }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="#333">
-                <path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6z"/>
-              </svg>
-            </button>
-          )}
-
-          {/* Dot indicators */}
-          <div className="fb-dots-indicator">
-            {cards.map((_, i) => (
-              <button
-                key={i}
-                className={`fb-dot ${i === activeCard ? 'fb-dot-active' : ''}`}
-                onClick={() => {
-                  const el = trackRef.current;
-                  if (el) {
-                    const cardNodes = el.children;
-                    if (cardNodes[i]) cardNodes[i].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
-                  }
-                }}
-              />
-            ))}
+          {/* Card 2: Image */}
+          <div className="fb-carousel-slide">
+            <div className="fb-card">
+               <div className="fb-card-media-wrapper">
+                  {imageFile ? (
+                    <img className="fb-card-media" src={URL.createObjectURL(imageFile)} alt="" />
+                  ) : (
+                    <div className="fb-card-placeholder">
+                       <span style={{color: 'var(--text-muted)'}}>Hình ảnh</span>
+                    </div>
+                  )}
+              </div>
+              <div className="fb-card-info">
+                <div className="fb-card-text">
+                  <div className="fb-domain">{getDomain(form.card2Link)}</div>
+                  <div className="fb-title">{form.card2Title || 'Tiêu đề thẻ 2'}</div>
+                  {form.card2Desc && <div className="fb-desc">{form.card2Desc}</div>}
+                </div>
+                {form.card2Cta && form.card2Cta !== 'NO_BUTTON' && (
+                  <button className="fb-cta-btn">{getCtaLabel(form.card2Cta)}</button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* ── Reaction stats ── */}
-        <div className="fb-stats-bar">
+        {/* Navigation arrows (only show if valid) */}
+        {currentSlide > 0 && (
+          <button className="fb-nav-btn fb-nav-prev" onClick={handlePrev}>
+             <ChevronLeft size={24} />
+          </button>
+        )}
+        {currentSlide === 0 && (
+          <button className="fb-nav-btn fb-nav-next" onClick={handleNext}>
+             <ChevronRight size={24} />
+          </button>
+        )}
+      </div>
+
+      {/* ── ENGAGEMENT BAR ── */}
+      <div className="fb-footer">
+        <div className="fb-stats">
           <div className="fb-reactions">
-            <span className="fb-react-emoji">👍</span>
-            <span className="fb-react-emoji">❤️</span>
-            <span className="fb-react-emoji">😮</span>
-            <span className="fb-react-count">58</span>
+            <div className="fb-reac-icon thumb-icon">👍</div>
+            <div className="fb-reac-icon heart-icon">❤️</div>
+            <span style={{marginLeft: 4}}>1,2k</span>
           </div>
-          <div className="fb-comment-count">1 bình luận</div>
+          <div className="fb-comments">12 bình luận • 8 lượt chia sẻ</div>
         </div>
-
-        {/* ── Action buttons ── */}
-        <div className="fb-action-bar">
-          <button className="fb-action-btn">👍  Thích</button>
-          <button className="fb-action-btn">💬  Bình luận</button>
-          <button className="fb-action-btn">↗  Chia sẻ</button>
+        <div className="fb-actions">
+          <button className="fb-action-btn"><ThumbsUp size={18} /> Thích</button>
+          <button className="fb-action-btn"><MessageCircle size={18} /> Bình luận</button>
+          <button className="fb-action-btn"><Share size={18} /> Chia sẻ</button>
         </div>
-
       </div>
     </div>
   )

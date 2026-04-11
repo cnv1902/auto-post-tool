@@ -1,11 +1,20 @@
 import { useState, useEffect } from 'react'
+import { Shield, Key, AlertCircle, Loader2, ArrowRight } from 'lucide-react'
 import './LoginPage.css'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
+function FacebookIcon({ size = 24, className = '' }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+    </svg>
+  )
+}
+
 export default function LoginPage({ subtitle }) {
-  const [appReady, setAppReady] = useState(null) // null=loading, true=has app, false=no backend or no app
-  const [noApp, setNoApp] = useState(false) // specifically no FB app configured
+  const [appReady, setAppReady] = useState(null)
+  const [noApp, setNoApp] = useState(false)
   const [error, setError] = useState(null)
 
   useEffect(() => {
@@ -44,57 +53,91 @@ export default function LoginPage({ subtitle }) {
 
   return (
     <div className="login-page">
-      <div className="login-card glass">
-        <div className="login-logo">
-          <span className="login-icon">📣</span>
-          <h1>Auto Post Tool</h1>
-          <p className="login-subtitle">{subtitle || 'Facebook Dark Post & Carousel Publisher'}</p>
-        </div>
-
-        <div className="login-body">
-          <p className="login-desc">
-            Đăng nhập bằng tài khoản Facebook để bắt đầu sử dụng.
-            Hệ thống sẽ tự động lấy danh sách Fanpage bạn quản lý.
-          </p>
-
-          {error && (
-            <div className="alert alert-error">
-              <span>❌ {error}</span>
-            </div>
-          )}
-
-          <button
-            className="btn-facebook"
-            onClick={handleLogin}
-            disabled={!appReady}
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="white" style={{marginRight: 10}}>
-              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-            </svg>
-            Đăng nhập bằng Facebook
-          </button>
-
-          {appReady === false && !noApp && (
-            <p className="login-warning">
-              ⚠️ Không thể kết nối backend. Kiểm tra uvicorn đang chạy.
-            </p>
-          )}
-
-          {noApp && (
-            <p className="login-warning">
-              ⚠️ Chưa cấu hình Facebook App. Admin cần truy cập <a href="/admin" style={{color: 'var(--accent)'}}>/admin</a> để thiết lập.
-            </p>
-          )}
-        </div>
-
-        <div className="login-footer">
-          <span>Bảo mật bởi OAuth 2.0</span>
-          <span>•</span>
-          <span>Token không lưu plaintext</span>
-        </div>
+      {/* Animated background */}
+      <div className="login-bg">
+        <div className="login-orb login-orb-1" />
+        <div className="login-orb login-orb-2" />
+        <div className="login-orb login-orb-3" />
+        <div className="login-grid-overlay" />
       </div>
 
-      <div className="login-bg-decor"></div>
+      <div className="login-container">
+        <div className="login-card glass-elevated">
+          {/* Logo */}
+          <div className="login-logo">
+            <div className="login-logo-icon">
+              <ArrowRight size={28} strokeWidth={2.5} />
+            </div>
+            <h1 className="login-title">Auto Post Tool</h1>
+            <p className="login-subtitle">
+              {subtitle || 'Facebook Publisher & Scheduler'}
+            </p>
+          </div>
+
+          {/* Body */}
+          <div className="login-body">
+            <p className="login-desc">
+              Đăng nhập bằng tài khoản Facebook để bắt đầu sử dụng.
+              Hệ thống sẽ tự động lấy danh sách Fanpage bạn quản lý.
+            </p>
+
+            {error && (
+              <div className="alert alert-error">
+                <AlertCircle size={18} />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <button
+              className="btn-facebook"
+              onClick={handleLogin}
+              disabled={!appReady}
+            >
+              {appReady === null ? (
+                <span className="btn-loading">
+                  <Loader2 size={20} className="spin-icon" />
+                  Đang kiểm tra...
+                </span>
+              ) : (
+                <>
+                  <FacebookIcon size={20} />
+                  <span>Đăng nhập bằng Facebook</span>
+                </>
+              )}
+            </button>
+
+            {appReady === false && !noApp && (
+              <div className="alert alert-warning">
+                <AlertCircle size={18} />
+                <span>Không thể kết nối backend. Kiểm tra server đang chạy.</span>
+              </div>
+            )}
+
+            {noApp && (
+              <div className="alert alert-warning">
+                <AlertCircle size={18} />
+                <span>
+                  Chưa cấu hình Facebook App. Admin cần truy cập{' '}
+                  <a href="/admin">/admin</a> để thiết lập.
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="login-footer">
+            <div className="login-trust-item">
+              <Shield size={14} />
+              <span>OAuth 2.0</span>
+            </div>
+            <div className="login-trust-divider" />
+            <div className="login-trust-item">
+              <Key size={14} />
+              <span>Token mã hóa</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

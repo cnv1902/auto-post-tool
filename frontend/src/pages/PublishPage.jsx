@@ -1,4 +1,9 @@
 import { useState, useEffect } from 'react'
+import {
+  FileVideo, Image as ImageIcon, Link as LinkIcon,
+  Layers, Clock, MonitorPlay, Send, Share2,
+  CalendarDays, Settings2, FileText, Pointer, Loader2, PlaySquare, Info
+} from 'lucide-react'
 import FileUpload from '../components/FileUpload'
 import ThumbnailPicker from '../components/ThumbnailPicker'
 import PostPreview from '../components/PostPreview'
@@ -235,34 +240,46 @@ export default function PublishPage() {
       {/* MODE SWITCHER */}
       <div className="mode-switcher glass">
         <button className={`mode-btn ${mode === 'normal' ? 'active' : ''}`} onClick={() => setMode('normal')}>
-          📷 Bài thường
+          <ImageIcon size={16} />
+          <span>Bài thường</span>
         </button>
         <button className={`mode-btn ${mode === 'single' ? 'active' : ''}`} onClick={() => setMode('single')}>
-          🔗 Bài đơn + Link
+          <LinkIcon size={16} />
+          <span>Bài đơn + Link</span>
         </button>
         <button className={`mode-btn ${mode === 'carousel' ? 'active' : ''}`} onClick={() => setMode('carousel')}>
-          🃏 Carousel
+          <Layers size={16} />
+          <span>Carousel</span>
         </button>
       </div>
 
       {/* TOP ROW: Fanpage + Scheduling */}
       <div className="publish-top-row">
         <div className="section-card glass top-card-page">
-          <h3 className="section-title">📄 Chọn Fanpage</h3>
+          <h3 className="section-title">
+            <LayoutList size={18} />
+            Chọn Fanpage
+          </h3>
           <select className="select-input" value={pageId} onChange={e => setPageId(e.target.value)}>
             {pages.length === 0 && <option value="">— Chưa có page —</option>}
             {pages.map(p => <option key={p.page_id} value={p.page_id}>{p.page_name}</option>)}
           </select>
         </div>
         <div className="section-card glass top-card-content">
-          <h3 className="section-title">⏰ Tùy chọn đăng</h3>
+          <h3 className="section-title">
+            <Clock size={18} />
+            Tùy chọn đăng
+          </h3>
           <div className="scheduling-block">
             <label className="schedule-toggle">
               <input type="checkbox" checked={isScheduled} onChange={e => setIsScheduled(e.target.checked)} />
-              <span>⏳ Lên lịch đăng bài</span>
+              <CalendarDays size={18} className="schedule-icon" />
+              <span>Lên lịch đăng bài</span>
             </label>
             {isScheduled && (
-              <input type="datetime-local" className="text-input schedule-datetime" value={scheduledTime} onChange={e => setScheduledTime(e.target.value)} />
+              <div className="schedule-input-wrapper animate-fade-in">
+                 <input type="datetime-local" className="text-input schedule-datetime" value={scheduledTime} onChange={e => setScheduledTime(e.target.value)} />
+              </div>
             )}
           </div>
         </div>
@@ -278,7 +295,10 @@ export default function PublishPage() {
             <PostPreview form={{...cForm, pageId}} videoFile={videoFile} thumbnailFile={thumbnailFile} imageFile={imageFile} pageName={currentPageName} />
           ) : (
             <div className="section-card glass single-preview-card">
-              <h3 className="section-title">👁️ Xem trước</h3>
+              <h3 className="section-title">
+                 <MonitorPlay size={18} />
+                 Xem trước
+              </h3>
               <div className="single-preview-body">
                 <div className="single-preview-media">
                   {activeMediaFile ? (
@@ -288,7 +308,10 @@ export default function PublishPage() {
                       <img src={URL.createObjectURL(activeMediaFile)} alt="" className="single-preview-img" />
                     )
                   ) : (
-                    <div className="single-preview-placeholder">{activeMediaType === 'video' ? '🎬 Chưa có video' : '🖼️ Chưa có ảnh'}</div>
+                    <div className="single-preview-placeholder">
+                      {activeMediaType === 'video' ? <FileVideo size={32} opacity={0.5} /> : <ImageIcon size={32} opacity={0.5} />}
+                      <span>{activeMediaType === 'video' ? 'Chưa có video' : 'Chưa có ảnh'}</span>
+                    </div>
                   )}
                 </div>
                 <div className="single-preview-info">
@@ -303,12 +326,19 @@ export default function PublishPage() {
           {toast && (
             <div className={`publish-toast toast-${toast.type}`}>
               {toast.type === 'publishing' && (
-                <div className="toast-body"><span className="spinner" /><span>{toast.msg}</span></div>
+                <div className="toast-body">
+                  <Loader2 size={18} className="spin-icon" />
+                  <span>{toast.msg}</span>
+                </div>
               )}
               {toast.type === 'success' && (
                 <div className="toast-body">
                   <span>{toast.msg}</span>
-                  {toast.link && <a href={toast.link} target="_blank" rel="noreferrer" className="toast-link">🔗 Xem bài viết</a>}
+                  {toast.link && (
+                    <a href={toast.link} target="_blank" rel="noreferrer" className="toast-link">
+                      <LinkIcon size={14} /> Xem bài viết
+                    </a>
+                  )}
                   <button className="toast-close" onClick={() => setToast(null)}>✕</button>
                 </div>
               )}
@@ -327,107 +357,133 @@ export default function PublishPage() {
 
           {/* ══════ NORMAL MODE ══════ */}
           {mode === 'normal' && (
-            <>
-              <div className="section-card glass card-config" style={{ borderLeft: '3px solid var(--accent)' }}>
-                <h3 className="section-title">📷 Đăng ảnh / video thường</h3>
+            <div className="animate-fade-in-up">
+              <div className="section-card glass card-config" style={{ borderLeft: '3px solid var(--accent)', marginBottom: '16px' }}>
+                <h3 className="section-title">
+                   <Settings2 size={18} />
+                   Đăng ảnh / video thường
+                </h3>
                 <div className="field-group">
                   <label>Loại media</label>
                   <div className="media-type-toggle">
-                    <button className={`mt-btn ${normalMediaType === 'video' ? 'active' : ''}`} onClick={() => { setNormalMediaType('video'); setNormalFile(null) }} type="button">🎬 Video</button>
-                    <button className={`mt-btn ${normalMediaType === 'image' ? 'active' : ''}`} onClick={() => { setNormalMediaType('image'); setNormalFile(null) }} type="button">🖼️ Ảnh</button>
+                    <button className={`mt-btn ${normalMediaType === 'video' ? 'active' : ''}`} onClick={() => { setNormalMediaType('video'); setNormalFile(null) }} type="button">
+                      <FileVideo size={16} /> Video
+                    </button>
+                    <button className={`mt-btn ${normalMediaType === 'image' ? 'active' : ''}`} onClick={() => { setNormalMediaType('image'); setNormalFile(null) }} type="button">
+                      <ImageIcon size={16} /> Ảnh
+                    </button>
                   </div>
                 </div>
-                <FileUpload id="normal-upload" label={normalMediaType === 'video' ? 'Video' : 'Ảnh'} accept={normalMediaType === 'video' ? 'video/mp4,video/*' : 'image/*'} icon={normalMediaType === 'video' ? '🎬' : '🖼️'} file={normalFile} onFile={setNormalFile} />
+                <FileUpload id="normal-upload" label={normalMediaType === 'video' ? 'Video' : 'Ảnh'} accept={normalMediaType === 'video' ? 'video/mp4,video/*' : 'image/*'} icon={normalMediaType === 'video' ? <FileVideo size={24}/> : <ImageIcon size={24}/>} file={normalFile} onFile={setNormalFile} />
                 {normalMediaType === 'video' && <ThumbnailPicker videoFile={normalFile} onThumbnailReady={setNormalThumb} />}
                 <div className="field-group">
                   <label>Caption</label>
                   <textarea className="token-input caption-input" rows={3} value={normalMsg} onChange={e => setNormalMsg(e.target.value)} placeholder="Nhập nội dung bài viết..." />
                 </div>
               </div>
-              <button className="btn-publish" onClick={handlePublishNormal} disabled={publishing || !pageId}>
-                {publishing ? <span className="btn-loading"><span className="spinner" />Đang xử lý...</span> : isScheduled ? '⏳ Lên lịch đăng bài' : '🚀 Đăng bài'}
+              <button className="btn-primary btn-publish" onClick={handlePublishNormal} disabled={publishing || !pageId}>
+                {publishing ? <span className="btn-loading"><Loader2 size={18} className="spin-icon" />Đang xử lý...</span> : isScheduled ? <><CalendarDays size={18}/> ⏳ Lên lịch đăng bài</> : <><Send size={18}/> 🚀 Đăng bài</>}
               </button>
-            </>
+             </div>
           )}
 
           {/* ══════ SINGLE + LINK MODE ══════ */}
           {mode === 'single' && (
-            <>
-              <div className="section-card glass card-config" style={{ borderLeft: '3px solid var(--accent)' }}>
-                <h3 className="section-title">📝 Bài đơn + Link website</h3>
+             <div className="animate-fade-in-up">
+              <div className="section-card glass card-config" style={{ borderLeft: '3px solid var(--accent)', marginBottom: '12px' }}>
+                <h3 className="section-title">
+                  <FileText size={18} />
+                  Bài đơn + Link website
+                </h3>
                 <div className="field-group">
                   <label>Loại media</label>
                   <div className="media-type-toggle">
-                    <button className={`mt-btn ${singleMediaType === 'video' ? 'active' : ''}`} onClick={() => { setSingleMediaType('video'); setSingleFile(null) }} type="button">🎬 Video</button>
-                    <button className={`mt-btn ${singleMediaType === 'image' ? 'active' : ''}`} onClick={() => { setSingleMediaType('image'); setSingleFile(null) }} type="button">🖼️ Ảnh</button>
+                    <button className={`mt-btn ${singleMediaType === 'video' ? 'active' : ''}`} onClick={() => { setSingleMediaType('video'); setSingleFile(null) }} type="button">
+                      <FileVideo size={16} /> Video
+                    </button>
+                    <button className={`mt-btn ${singleMediaType === 'image' ? 'active' : ''}`} onClick={() => { setSingleMediaType('image'); setSingleFile(null) }} type="button">
+                      <ImageIcon size={16} /> Ảnh
+                    </button>
                   </div>
                 </div>
-                <FileUpload id="single-upload" label={singleMediaType === 'video' ? 'Video' : 'Ảnh'} accept={singleMediaType === 'video' ? 'video/mp4,video/*' : 'image/*'} icon={singleMediaType === 'video' ? '🎬' : '🖼️'} file={singleFile} onFile={setSingleFile} />
+                <FileUpload id="single-upload" label={singleMediaType === 'video' ? 'Video' : 'Ảnh'} accept={singleMediaType === 'video' ? 'video/mp4,video/*' : 'image/*'} icon={singleMediaType === 'video' ? <FileVideo size={24}/> : <ImageIcon size={24} />} file={singleFile} onFile={setSingleFile} />
                 {singleMediaType === 'video' && <ThumbnailPicker videoFile={singleFile} onThumbnailReady={setSingleThumb} />}
                 <div className="field-group">
                   <label>Caption</label>
                   <textarea className="token-input caption-input" rows={2} value={singleMsg} onChange={e => setSingleMsg(e.target.value)} placeholder="Nhập nội dung..." />
                 </div>
               </div>
-              <div className="section-card glass card-config" style={{ borderLeft: '3px solid var(--accent-2)' }}>
-                <h3 className="section-title">🔗 Chuyển đến trang web</h3>
-                <div className="field-group">
-                  <label>URL trang web <span className="hint">(bắt buộc)</span></label>
-                  <input type="url" className="text-input" value={singleLink} onChange={e => setSingleLink(e.target.value)} placeholder="https://example.com" />
+              <div className="section-card glass card-config" style={{ borderLeft: '3px solid var(--accent-2)', marginBottom: '16px' }}>
+                <h3 className="section-title">
+                  <LinkIcon size={18} />
+                  Chuyển đến trang web
+                </h3>
+                <div className="field-row">
+                  <div className="field-group">
+                    <label>URL trang web <span className="hint">(bắt buộc)</span></label>
+                    <input type="url" className="text-input" value={singleLink} onChange={e => setSingleLink(e.target.value)} placeholder="https://example.com" />
+                  </div>
+                  <div className="field-group">
+                    <label>Liên kết hiển thị <span className="hint">(tùy chọn)</span></label>
+                    <input type="text" className="text-input" value={singleDisplayLink} onChange={e => setSingleDisplayLink(e.target.value)} placeholder="shopee.vn/deal" />
+                  </div>
                 </div>
-                <div className="field-group">
-                  <label>Liên kết hiển thị <span className="hint">(tùy chọn)</span></label>
-                  <input type="text" className="text-input" value={singleDisplayLink} onChange={e => setSingleDisplayLink(e.target.value)} placeholder="shopee.vn/deal" />
-                </div>
-                <div className="field-group">
+                <div className="field-group mt-2">
                   <label>Nút CTA</label>
                   <select className="select-input" value={singleCta} onChange={e => setSingleCta(e.target.value)}>
                     {CTA_TYPES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                   </select>
                 </div>
               </div>
-              <button className="btn-publish" onClick={handlePublishSingle} disabled={publishing || !pageId}>
-                {publishing ? <span className="btn-loading"><span className="spinner" />Đang xử lý...</span> : isScheduled ? '⏳ Lên lịch đăng bài' : '🚀 Đăng bài'}
+              <button className="btn-primary btn-publish" onClick={handlePublishSingle} disabled={publishing || !pageId}>
+                 {publishing ? <span className="btn-loading"><Loader2 size={18} className="spin-icon"/>Đang xử lý...</span> : isScheduled ? <><CalendarDays size={18}/> ⏳ Lên lịch đăng bài</> : <><Send size={18}/> 🚀 Đăng bài</>}
               </button>
-            </>
+            </div>
           )}
 
           {/* ══════ CAROUSEL MODE ══════ */}
           {mode === 'carousel' && (
-            <>
-              <div className="section-card glass card-config" style={{ borderLeft: '3px solid var(--accent)' }}>
-                <h3 className="section-title">✍️ Nội dung Carousel</h3>
+            <div className="animate-fade-in-up">
+              <div className="section-card glass card-config" style={{ borderLeft: '3px solid var(--accent)', marginBottom: '12px' }}>
+                <h3 className="section-title">
+                   <Pointer size={18} />
+                   Nội dung Carousel
+                </h3>
                 <div className="field-group"><label>Caption</label><textarea className="token-input caption-input" rows={2} value={cForm.message} onChange={cSet('message')} /></div>
               </div>
-              <div className="section-card glass card-config card1-config">
-                <h3 className="section-title">🃏 Card 1 — Video</h3>
+              <div className="section-card glass card-config card1-config" style={{marginBottom: '12px'}}>
+                <h3 className="section-title"><PlaySquare size={18}/> Card 1 — Video</h3>
                 <div className="field-row">
                   <div className="field-group"><label>Tiêu đề</label><input type="text" className="text-input" value={cForm.card1Title} onChange={cSet('card1Title')} /></div>
                   <div className="field-group"><label>CTA</label><select className="select-input" value={cForm.card1Cta} onChange={cSet('card1Cta')}>{CTA_TYPES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select></div>
                 </div>
-                <div className="field-row">
+                <div className="field-row" style={{marginTop: '10px'}}>
                   <div className="field-group"><label>Link đích</label><input type="url" className="text-input" value={cForm.card1Link} onChange={cSet('card1Link')} /></div>
                   <div className="field-group"><label>Mô tả (tùy chọn)</label><input type="text" className="text-input" value={cForm.card1Desc} onChange={cSet('card1Desc')} maxLength={80} /></div>
                 </div>
-                <FileUpload id="c-video" label="Video" accept="video/mp4,video/*" icon="🎬" file={videoFile} onFile={setVideoFile} />
-                <ThumbnailPicker videoFile={videoFile} onThumbnailReady={setThumbnailFile} />
+                <div style={{marginTop: '12px'}}>
+                  <FileUpload id="c-video" label="Video" accept="video/mp4,video/*" icon={<FileVideo size={24}/>} file={videoFile} onFile={setVideoFile} />
+                  <ThumbnailPicker videoFile={videoFile} onThumbnailReady={setThumbnailFile} />
+                </div>
               </div>
-              <div className="section-card glass card-config card2-config">
-                <h3 className="section-title">🃏 Card 2 — Ảnh</h3>
+              <div className="section-card glass card-config card2-config" style={{marginBottom: '16px'}}>
+                <h3 className="section-title"><ImageIcon size={18}/> Card 2 — Ảnh</h3>
                 <div className="field-row">
                   <div className="field-group"><label>Tiêu đề</label><input type="text" className="text-input" value={cForm.card2Title} onChange={cSet('card2Title')} /></div>
                   <div className="field-group"><label>CTA</label><select className="select-input" value={cForm.card2Cta} onChange={cSet('card2Cta')}>{CTA_TYPES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select></div>
                 </div>
-                <div className="field-row">
+                <div className="field-row" style={{marginTop: '10px'}}>
                   <div className="field-group"><label>Link đích</label><input type="url" className="text-input" value={cForm.card2Link} onChange={cSet('card2Link')} /></div>
                   <div className="field-group"><label>Mô tả (tùy chọn)</label><input type="text" className="text-input" value={cForm.card2Desc} onChange={cSet('card2Desc')} maxLength={80} /></div>
                 </div>
-                <FileUpload id="c-image" label="Ảnh Card 2" accept="image/*" icon="🖼️" file={imageFile} onFile={setImageFile} />
+                <div style={{marginTop: '12px'}}>
+                   <FileUpload id="c-image" label="Ảnh Card 2" accept="image/*" icon={<ImageIcon size={24}/>} file={imageFile} onFile={setImageFile} />
+                </div>
               </div>
-              <button className="btn-publish" onClick={handlePublishCarousel} disabled={publishing || !pageId}>
-                {publishing ? <span className="btn-loading"><span className="spinner" />Đang xử lý...</span> : isScheduled ? '⏳ Lên lịch đăng bài' : '🚀 Đăng bài'}
+              <button className="btn-primary btn-publish" onClick={handlePublishCarousel} disabled={publishing || !pageId}>
+                 {publishing ? <span className="btn-loading"><Loader2 size={18} className="spin-icon"/>Đang xử lý...</span> : isScheduled ? <><CalendarDays size={18}/> ⏳ Lên lịch đăng bài</> : <><Send size={18}/> 🚀 Đăng bài</>}
               </button>
-            </>
+            </div>
           )}
 
         </div>

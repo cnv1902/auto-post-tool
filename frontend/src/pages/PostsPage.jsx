@@ -1,4 +1,8 @@
 import { useState, useEffect } from 'react'
+import {
+  Search, RefreshCw, Trash2, CheckCircle2, Clock, CheckSquare,
+  AlertCircle, LayoutList, Calendar, ExternalLink, Inbox, Check
+} from 'lucide-react'
 import './PostsPage.css'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
@@ -85,12 +89,10 @@ export default function PostsPage() {
         headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: itemsToDelete }),
       })
-      const data = await res.json()
-      console.log('Bulk delete result:', data)
+      await res.json()
       setSelected(new Set())
       await fetchPosts()
     } catch (err) {
-      console.error('Bulk delete failed:', err)
       alert('Xóa thất bại: ' + err.message)
     } finally {
       setDeleting(false)
@@ -121,24 +123,25 @@ export default function PostsPage() {
   }
 
   function renderStatus(status) {
-    if (status === 'published') return '✅ Đã đăng'
-    if (status === 'scheduled') return '⏳ Đã lên lịch'
-    return status
+    if (status === 'published') return <span className="status-badge status-published"><CheckCircle2 size={12}/> Đã đăng</span>
+    if (status === 'scheduled') return <span className="status-badge status-scheduled"><Clock size={12}/> Đã lên lịch</span>
+    return <span className="status-badge status-failed"><AlertCircle size={12}/> Lỗi</span>
   }
 
   return (
-    <div className="posts-page">
+    <div className="posts-page animate-fade-in-up">
       {/* Header bar */}
       <div className="posts-header glass">
         <div className="posts-header-left">
-          <h2 className="posts-title">📋 Quản lý bài viết</h2>
-          <span className="posts-count">{posts.length} bài viết</span>
+          <div className="posts-header-icon"><LayoutList size={20}/></div>
+          <h2 className="posts-title">Quản lý bài viết</h2>
+          <span className="posts-count badge badge-accent">{posts.length} bài viết</span>
         </div>
         <div className="posts-header-right">
           {/* Page filter */}
           <div className="posts-filter-box">
             <select
-              className="posts-filter-select"
+              className="select-input posts-filter-select"
               value={filterPageId}
               onChange={e => { setFilterPageId(e.target.value); setSelected(new Set()) }}
             >
@@ -149,7 +152,7 @@ export default function PostsPage() {
             </select>
           </div>
           <div className="posts-search-box">
-            <span className="search-icon">🔍</span>
+            <Search size={16} className="search-icon text-muted" />
             <input
               type="text"
               className="posts-search"
@@ -159,12 +162,12 @@ export default function PostsPage() {
             />
           </div>
           <button
-            className="btn-refresh"
+            className="btn-icon"
             onClick={fetchPosts}
             disabled={loading}
             title="Tải lại"
           >
-            ↻
+            <RefreshCw size={18} className={loading ? 'spin-icon' : ''} />
           </button>
         </div>
       </div>
@@ -172,120 +175,177 @@ export default function PostsPage() {
       {/* Bulk actions bar */}
       {selected.size > 0 && (
         <div className="posts-bulk-bar">
-          <span className="bulk-count">✓ Đã chọn {selected.size} bài viết</span>
-          <button
-            className="btn-bulk-delete"
-            onClick={handleBulkDelete}
-            disabled={deleting}
-          >
-            {deleting ? (
-              <span className="btn-loading"><span className="spinner" />Đang xóa...</span>
-            ) : (
-              '🗑️ Xóa đã chọn'
-            )}
-          </button>
-          <button className="btn-bulk-cancel" onClick={() => setSelected(new Set())}>
-            Bỏ chọn tất cả
-          </button>
+          <span className="bulk-count">
+            <CheckSquare size={16} /> Đã chọn {selected.size} bài viết
+          </span>
+          <div className="bulk-actions">
+            <button className="btn-ghost btn-sm" onClick={() => setSelected(new Set())}>
+              Bỏ chọn tất cả
+            </button>
+            <button
+              className="btn-danger btn-sm"
+              onClick={handleBulkDelete}
+              disabled={deleting}
+              style={{display: 'inline-flex', alignItems: 'center', gap: '6px'}}
+            >
+              {deleting ? (
+                <span className="btn-loading"><span className="spinner" />Đang xóa...</span>
+              ) : (
+                <><Trash2 size={14}/> Xóa đã chọn</>
+              )}
+            </button>
+          </div>
         </div>
       )}
 
       {/* Posts list */}
       {loading ? (
         <div className="posts-loading">
-          <span className="spinner" />
-          <span>Đang tải...</span>
+          <span className="spinner spinner-lg" style={{ color: 'var(--accent)' }}/>
+          <span>Đang tải dữ liệu...</span>
         </div>
       ) : filtered.length === 0 ? (
         <div className="posts-empty glass">
-          <span className="posts-empty-icon">{searchTerm ? '🔍' : '📭'}</span>
+          <div className="posts-empty-icon">
+            {searchTerm ? <Search size={48} strokeWidth={1.5} /> : <Inbox size={48} strokeWidth={1.5} />}
+          </div>
           <span className="posts-empty-text">
             {searchTerm ? 'Không tìm thấy bài viết phù hợp' : 'Chưa có bài viết nào được đăng'}
           </span>
           {!searchTerm && (
             <span className="posts-empty-hint">
-              Bài viết sẽ xuất hiện ở đây sau khi bạn đăng bài thành công.
+              Bài đăng từ công cụ sẽ được hiển thị và quản lý ở đây.
             </span>
           )}
         </div>
       ) : (
-        <div className="posts-table-wrap glass">
-          <table className="posts-table">
-            <thead>
-              <tr>
-                <th className="th-check">
-                  <input
-                    type="checkbox"
-                    checked={selected.size === filtered.length && filtered.length > 0}
-                    onChange={toggleSelectAll}
-                    className="posts-checkbox"
-                  />
-                </th>
-                <th>Bài viết</th>
-                <th>Fanpage</th>
-                <th>Trạng thái</th>
-                <th>Ngày đăng</th>
-                <th className="th-actions">Hành động</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(post => (
-                <tr
-                  key={post.post_id}
-                  className={selected.has(post.post_id) ? 'row-selected' : ''}
-                >
-                  <td className="td-check">
-                    <input
-                      type="checkbox"
-                      checked={selected.has(post.post_id)}
-                      onChange={() => toggleSelect(post.post_id)}
-                      className="posts-checkbox"
-                    />
-                  </td>
-                  <td className="td-message">
-                    <div className="post-message-preview">
-                      {post.message
-                        ? post.message.length > 80
-                          ? post.message.slice(0, 80) + '...'
-                          : post.message
-                        : '(Không có caption)'}
-                    </div>
-                    <div className="post-id-small">ID: {post.post_id}</div>
-                  </td>
-                  <td>
-                    <span className="page-name-badge">{post.page_name || 'N/A'}</span>
-                  </td>
-                  <td>
-                    <span className={`status-badge status-${post.status}`}>
-                      {renderStatus(post.status)}
-                    </span>
-                  </td>
-                  <td className="td-date">{formatDate(post.created_at)}</td>
-                  <td className="td-actions">
-                    {post.permalink && (
-                      <a
-                        href={post.permalink}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="btn-view"
-                        title="Xem trên Facebook"
-                      >
-                        🔗
-                      </a>
-                    )}
-                    <button
-                      className="btn-delete-single"
-                      onClick={() => handleDeleteSingle(post.post_id, post.page_id)}
-                      title="Xóa bài viết"
-                    >
-                      🗑️
-                    </button>
-                  </td>
+        <>
+          {/* Desktop Table View */}
+          <div className="posts-table-wrap glass desktop-view">
+            <table className="posts-table">
+              <thead>
+                <tr>
+                  <th className="th-check">
+                    <label className="custom-checkbox">
+                        <input
+                            type="checkbox"
+                            checked={selected.size === filtered.length && filtered.length > 0}
+                            onChange={toggleSelectAll}
+                        />
+                        <span className="checkmark"><Check size={12}/></span>
+                    </label>
+                  </th>
+                  <th>Bài viết</th>
+                  <th>Fanpage</th>
+                  <th>Trạng thái</th>
+                  <th>Ngày đăng</th>
+                  <th className="th-actions">Thao tác</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filtered.map(post => (
+                  <tr
+                    key={post.post_id}
+                    className={selected.has(post.post_id) ? 'row-selected' : ''}
+                  >
+                    <td className="td-check">
+                        <label className="custom-checkbox">
+                            <input
+                                type="checkbox"
+                                checked={selected.has(post.post_id)}
+                                onChange={() => toggleSelect(post.post_id)}
+                            />
+                            <span className="checkmark"><Check size={12}/></span>
+                        </label>
+                    </td>
+                    <td className="td-message">
+                      <div className="post-message-preview">
+                        {post.message
+                          ? post.message.length > 80
+                            ? post.message.slice(0, 80) + '...'
+                            : post.message
+                          : <span className="text-muted italic">(Không có caption)</span>}
+                      </div>
+                      <div className="post-id-small">ID: {post.post_id}</div>
+                    </td>
+                    <td>
+                      <span className="page-name-badge">{post.page_name || 'N/A'}</span>
+                    </td>
+                    <td>
+                      {renderStatus(post.status)}
+                    </td>
+                    <td className="td-date">
+                      <Calendar size={12}/> {formatDate(post.created_at)}
+                    </td>
+                    <td className="td-actions">
+                      {post.permalink && (
+                        <a
+                          href={post.permalink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn-icon-action"
+                          title="Xem trên Facebook"
+                        >
+                          <ExternalLink size={16} />
+                        </a>
+                      )}
+                      <button
+                        className="btn-icon-action danger"
+                        onClick={() => handleDeleteSingle(post.post_id, post.page_id)}
+                        title="Xóa bài viết"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Cards View */}
+          <div className="posts-mobile-wrap mobile-view">
+             {filtered.map(post => (
+                <div key={post.post_id} className={`post-mobile-card glass ${selected.has(post.post_id) ? 'selected' : ''}`}>
+                   <div className="post-mobile-header">
+                      <label className="custom-checkbox">
+                          <input
+                              type="checkbox"
+                              checked={selected.has(post.post_id)}
+                              onChange={() => toggleSelect(post.post_id)}
+                          />
+                          <span className="checkmark"><Check size={12}/></span>
+                      </label>
+                      <span className="page-name-badge">{post.page_name || 'N/A'}</span>
+                      {renderStatus(post.status)}
+                   </div>
+                   <div className="post-mobile-body">
+                      <div className="post-message-preview">
+                        {post.message
+                          ? post.message.length > 100
+                            ? post.message.slice(0, 100) + '...'
+                            : post.message
+                          : <span className="text-muted italic">(Không có caption)</span>}
+                      </div>
+                      <div className="post-mobile-meta">
+                         <span className="post-id-small">ID: {post.post_id.slice(0, 15)}...</span>
+                         <span className="td-date"><Calendar size={12}/> {formatDate(post.created_at)}</span>
+                      </div>
+                   </div>
+                   <div className="post-mobile-footer">
+                      {post.permalink && (
+                        <a href={post.permalink} target="_blank" rel="noreferrer" className="btn-ghost btn-sm" style={{flex: 1}}>
+                          <ExternalLink size={14} /> Xem bài
+                        </a>
+                      )}
+                      <button className="btn-danger btn-sm" onClick={() => handleDeleteSingle(post.post_id, post.page_id)}>
+                        <Trash2 size={14} />
+                      </button>
+                   </div>
+                </div>
+             ))}
+          </div>
+        </>
       )}
     </div>
   )
