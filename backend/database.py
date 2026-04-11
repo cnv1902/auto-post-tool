@@ -91,7 +91,13 @@ class Post(Base):
     message       = Column(Text, nullable=False, default="")
     permalink     = Column(String, nullable=True)
     thumbnail_url = Column(String, nullable=True)
-    status        = Column(String, nullable=False, default="published")
+    status        = Column(String, nullable=False, default="published") # published, scheduled, failed
+    
+    # ── Scheduler support ──
+    scheduled_time = Column(Integer, nullable=True) # Unix timestamp
+    payload        = Column(Text, nullable=True)    # JSON string
+    post_type      = Column(String, nullable=True)  # 'carousel', 'single', 'normal'
+    
     user_id       = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     created_at    = Column(DateTime, default=datetime.utcnow)
 

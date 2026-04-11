@@ -24,10 +24,14 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 
+import asyncio
+from scheduler import background_scheduler_loop
+
 # Init DB khi startup
 @app.on_event("startup")
 def on_startup():
     init_db()
+    asyncio.create_task(background_scheduler_loop())
 
 
 # ── Routers ──

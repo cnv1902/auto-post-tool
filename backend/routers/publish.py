@@ -6,13 +6,13 @@ import os
 import uuid
 import json
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from sqlalchemy.orm import Session
 from typing import Annotated
 
 from database import get_db, User, Page, Post
 from auth import get_current_user
-from services.facebook import publish_stream, publish_single_stream
+from services.facebook import publish_stream, publish_single_stream, publish_normal_stream
 
 router = APIRouter()
 
@@ -86,6 +86,35 @@ async def publish(
     if scheduled_time.isdigit():
         parsed_scheduled_time = int(scheduled_time)
 
+    # ── SCHEDULER BACKEND ──
+    if parsed_scheduled_time:
+        import json
+        payload = {
+            "page_id": page_id, "ad_account_id": ad_account_id,
+            "message": message, "safe_link": safe_link,
+            "card1_title": card1_title, "card2_title": card2_title,
+            "card1_desc": card1_desc, "card2_desc": card2_desc,
+            "card1_cta": card1_cta, "card2_cta": card2_cta,
+            "video_file": video_path, "thumbnail_file": thumbnail_path, "image_file": image_path,
+            "user_token": user_token, "page_token": page_token
+        }
+        post = Post(
+            post_id = f"sch_{uuid.uuid4().hex[:8]}",
+            page_id = page_id,
+            page_name = page.page_name,
+            message = message[:500],
+            status = "scheduled",
+            user_id = current_user.id,
+            scheduled_time = parsed_scheduled_time,
+            payload = json.dumps(payload),
+            post_type = "carousel"
+        )
+        db.add(post)
+        db.commit()
+        return JSONResponse({"success": True, "msg": "Lưu OK", "post_id": post.post_id})
+
+
+    # ── ĐĂNG NGAY (IMMEDIATE) ──
     async def event_generator():
         async for chunk in publish_stream(
             user_token     = user_token,       # USER TOKEN — cho Marketing API
@@ -103,7 +132,6 @@ async def publish(
             video_path     = video_path,
             thumbnail_path = thumbnail_path,
             image_path     = image_path,
-            scheduled_time = parsed_scheduled_time,
         ):
             # Capture post info từ stream để lưu DB
             if chunk.startswith("data: ") and chunk.strip() != "data: [DONE]":
@@ -123,14 +151,13 @@ async def publish(
                 try:
                     # Prefer the real FB post_id, fallback to old logic
                     real_post_id = captured_post.get("post_id") or captured_post.get("permalink", "").split("/")[-1] or uuid.uuid4().hex
-                    post_status = "scheduled" if parsed_scheduled_time else "published"
                     post = Post(
                         post_id   = real_post_id,
                         page_id   = page_id,
                         page_name = page.page_name,
                         message   = message[:500],
                         permalink = captured_post.get("permalink", ""),
-                        status    = post_status,
+                        status    = "published",
                         user_id   = current_user.id,  # ← per-user!
                     )
                     db.add(post)
@@ -199,6 +226,33 @@ async def publish_single(
     if scheduled_time.isdigit():
         parsed_scheduled_time = int(scheduled_time)
 
+    # ── SCHEDULER BACKEND ──
+    if parsed_scheduled_time:
+        import json
+        payload = {
+            "page_id": page_id, "ad_account_id": ad_account_id,
+            "message": message, "link": link,
+            "display_link": display_link, "cta_type": cta_type,
+            "media_type": media_type, "media_file": media_path, "thumbnail_file": thumbnail_path,
+            "user_token": user_token, "page_token": page_token
+        }
+        post = Post(
+            post_id = f"sch_{uuid.uuid4().hex[:8]}",
+            page_id = page_id,
+            page_name = page.page_name,
+            message = message[:500],
+            status = "scheduled",
+            user_id = current_user.id,
+            scheduled_time = parsed_scheduled_time,
+            payload = json.dumps(payload),
+            post_type = "single"
+        )
+        db.add(post)
+        db.commit()
+        return JSONResponse({"success": True, "msg": "Lưu OK", "post_id": post.post_id})
+
+
+    # ── ĐĂNG NGAY (IMMEDIATE) ──
     async def event_generator():
         async for chunk in publish_single_stream(
             user_token     = user_token,
@@ -212,7 +266,7 @@ async def publish_single(
             media_type     = media_type,
             media_path     = media_path,
             thumbnail_path = thumbnail_path,
-            scheduled_time = parsed_scheduled_time,
+            scheduled_time = None,
         ):
             if chunk.startswith("data: ") and chunk.strip() != "data: [DONE]":
                 try:
@@ -221,7 +275,7 @@ async def publish_single(
                         captured_post["permalink"] = data["msg"]
                     if data.get("level") == "post_id":
                         captured_post["post_id"] = data["msg"]
-                    if data.get("level") == "success" and ("BÀI ĐÃ PUBLIC" in data.get("msg", "") or "BÀI ĐÃ LÊN LỊCH" in data.get("msg", "")):
+                    if data.get("level") == "success" and ("BÀI ĐÃ" in data.get("msg", "")):
                         captured_post["success"] = True
                 except Exception:
                     pass
@@ -229,14 +283,13 @@ async def publish_single(
             if chunk.strip() == "data: [DONE]" and captured_post.get("success"):
                 try:
                     real_post_id = captured_post.get("post_id") or captured_post.get("permalink", "").split("/")[-1] or uuid.uuid4().hex
-                    post_status = "scheduled" if parsed_scheduled_time else "published"
                     post = Post(
                         post_id   = real_post_id,
                         page_id   = page_id,
                         page_name = page.page_name,
                         message   = message[:500],
                         permalink = captured_post.get("permalink", ""),
-                        status    = post_status,
+                        status    = "published",
                         user_id   = current_user.id,
                     )
                     db.add(post)
@@ -244,6 +297,120 @@ async def publish_single(
                     print(f"[PUBLISH_SINGLE] ✅ Saved post to DB: {post.post_id}")
                 except Exception as ex:
                     print(f"[PUBLISH_SINGLE][WARN] Failed to save: {ex}")
+
+            yield chunk
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control":               "no-cache",
+            "X-Accel-Buffering":           "no",
+            "Access-Control-Allow-Origin": "*",
+        },
+    )
+
+
+@router.post("/api/publish/normal")
+async def publish_normal(
+    page_id:      Annotated[str, Form()],
+    message:      Annotated[str, Form()] = "",
+    media_type:   Annotated[str, Form()] = "image",
+    scheduled_time: Annotated[str, Form()] = "",
+    media_file:      UploadFile = File(...),
+    thumbnail_file:  UploadFile = File(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Dăng ảnh/video bình thường qua Page API (hỗ trợ lên lịch native)."""
+    print(f"🚀 Normal Post: user={current_user.name}, page={page_id}, type={media_type}")
+
+    page = (
+        db.query(Page)
+        .filter(Page.page_id == page_id, Page.user_id == current_user.id)
+        .first()
+    )
+    if not page:
+        raise HTTPException(status_code=404, detail=f"Không tìm thấy page ID: {page_id}")
+
+    page_token = page.page_access_token
+
+    suffix = ".mp4" if media_type == "video" else ".jpg"
+    media_path = await _save_upload(media_file, suffix)
+    thumbnail_path = None
+    if thumbnail_file and thumbnail_file.filename:
+        thumbnail_path = await _save_upload(thumbnail_file, ".jpg")
+
+    captured_post = {}
+    parsed_scheduled_time = None
+    if scheduled_time.isdigit():
+        parsed_scheduled_time = int(scheduled_time)
+
+    # ── SCHEDULER BACKEND ──
+    if parsed_scheduled_time:
+        import json
+        payload = {
+            "page_id": page_id, 
+            "message": message,
+            "media_type": media_type, "media_file": media_path, "thumbnail_file": thumbnail_path,
+            "page_token": page_token
+        }
+        post = Post(
+            post_id = f"sch_{uuid.uuid4().hex[:8]}",
+            page_id = page_id,
+            page_name = page.page_name,
+            message = message[:500],
+            status = "scheduled",
+            user_id = current_user.id,
+            scheduled_time = parsed_scheduled_time,
+            payload = json.dumps(payload),
+            post_type = "normal"
+        )
+        db.add(post)
+        db.commit()
+        return JSONResponse({"success": True, "msg": "Lưu OK", "post_id": post.post_id})
+
+
+    # ── ĐĂNG NGAY (IMMEDIATE) ──
+    async def event_generator():
+        async for chunk in publish_normal_stream(
+            page_token     = page_token,
+            page_id        = page_id,
+            message        = message,
+            media_type     = media_type,
+            media_path     = media_path,
+            thumbnail_path = thumbnail_path,
+            scheduled_time = None,
+        ):
+            if chunk.startswith("data: ") and chunk.strip() != "data: [DONE]":
+                try:
+                    data = json.loads(chunk[6:].strip())
+                    if data.get("level") == "link":
+                        captured_post["permalink"] = data["msg"]
+                    if data.get("level") == "post_id":
+                        captured_post["post_id"] = data["msg"]
+                    if data.get("level") == "success":
+                        captured_post["success"] = True
+                except Exception:
+                    pass
+
+            if chunk.strip() == "data: [DONE]" and captured_post.get("success"):
+                try:
+                    real_post_id = captured_post.get("post_id") or uuid.uuid4().hex
+                    post = Post(
+                        post_id   = real_post_id,
+                        page_id   = page_id,
+                        page_name = page.page_name,
+                        message   = message[:500],
+                        permalink = captured_post.get("permalink", ""),
+                        status    = "published",
+                        user_id   = current_user.id,
+                    )
+                    db.add(post)
+                    db.commit()
+                    print(f"[NORMAL] ✅ Saved post to DB: {post.post_id}")
+                except Exception as ex:
+                    print(f"[NORMAL][WARN] Failed to save: {ex}")
 
             yield chunk
 

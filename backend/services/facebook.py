@@ -310,23 +310,14 @@ def post_darkpost_carousel(
     if not post_id:
         return {"success": False, "error": "Không lấy được Post ID sau 15 lần thử."}
 
-    # Bước 3: Publish
-    payload = {"access_token": page_token}
-    if scheduled_time:
-        payload["is_published"] = "false"
-        payload["scheduled_publish_time"] = str(scheduled_time)
-    else:
-        payload["is_published"] = "true"
-
+    # Bước 3: Publish — luôn đăng ngay
     requests.post(
         f"{BASE_URL}/{post_id}",
-        data=payload,
+        data={"is_published": "true", "access_token": page_token},
         timeout=15,
     )
 
-    # Bước 4: Verify — lấy permalink, coi như success nếu đã có post_id
-    # (scheduled posts sẽ có is_published=False, và immediate posts
-    #  đôi khi FB delay vài giây nên cũng trả False — không nên dựa vào đây)
+    # Bước 4: Verify
     time.sleep(3)
     check_res = requests.get(
         f"{BASE_URL}/{post_id}",
@@ -343,8 +334,14 @@ def post_darkpost_carousel(
         f"https://www.facebook.com/{page_id}/posts/{numeric_post_id}",
     )
 
-    # Đã có post_id từ creative → post tồn tại trên FB → success
-    return {"success": True, "post_id": post_id, "permalink": permalink}
+    if check_res.get("is_published"):
+        return {"success": True, "post_id": post_id, "permalink": permalink}
+    else:
+        return {
+            "success": False,
+            "error": f"Vẫn chưa public: {check_res}",
+            "permalink": permalink,
+        }
 
 
 # ─────────────────────────────────────────────
@@ -741,3 +738,127 @@ async def publish_single_stream(
         yield "data: [DONE]\n\n"
 
 
+# ─────────────────────────────────────────────
+#  NORMAL POST — Đăng ảnh/video bình thường qua Page API
+#  Hỗ trợ scheduled_publish_time native
+# ─────────────────────────────────────────────
+
+def post_normal_photo(
+    page_token: str,
+    page_id: str,
+    file_path: str,
+    message: str = "",
+    scheduled_time: Optional[int] = None,
+) -> dict:
+    """Đăng ảnh bình thường lên page via Page API."""
+    data = {"access_token": page_token, "message": message}
+    if scheduled_time:
+        data["published"] = "false"
+        data["scheduled_publish_time"] = str(scheduled_time)
+
+    with open(file_path, "rb") as f:
+        res = requests.post(
+            f"{BASE_URL}/{page_id}/photos",
+            data=data,
+            files={"source": (os.path.basename(file_path), f, "image/jpeg")},
+            timeout=120,
+        ).json()
+
+    if "id" in res:
+        photo_id = res["id"]
+        post_id = res.get("post_id", photo_id)
+        permalink = f"https://www.facebook.com/{page_id}/posts/{post_id.split('_')[-1]}" if '_' in str(post_id) else f"https://www.facebook.com/{photo_id}"
+        return {"success": True, "post_id": post_id, "permalink": permalink}
+    return {"success": False, "error": f"Facebook trả về lỗi: {res}"}
+
+
+def post_normal_video(
+    page_token: str,
+    page_id: str,
+    file_path: str,
+    message: str = "",
+    thumbnail_path: Optional[str] = None,
+    scheduled_time: Optional[int] = None,
+) -> dict:
+    """Đăng video bình thường lên page via Page API."""
+    data = {
+        "access_token": page_token,
+        "description": message,
+    }
+    if scheduled_time:
+        data["published"] = "false"
+        data["scheduled_publish_time"] = str(scheduled_time)
+
+    files = {"source": (os.path.basename(file_path), open(file_path, "rb"), "video/mp4")}
+    if thumbnail_path:
+        files["thumb"] = (os.path.basename(thumbnail_path), open(thumbnail_path, "rb"), "image/jpeg")
+
+    res = requests.post(
+        f"{BASE_VIDEO_URL}/{page_id}/videos",
+        data=data,
+        files=files,
+        timeout=600,
+    ).json()
+
+    # Close file handles
+    for fh in files.values():
+        if hasattr(fh, '__iter__') and len(fh) > 1:
+            try: fh[1].close()
+            except: pass
+
+    if "id" in res:
+        video_id = res["id"]
+        permalink = f"https://www.facebook.com/{page_id}/videos/{video_id}"
+        return {"success": True, "post_id": f"{page_id}_{video_id}", "permalink": permalink}
+    return {"success": False, "error": f"Facebook trả về lỗi: {res}"}
+
+
+async def publish_normal_stream(
+    page_token: str,
+    page_id: str,
+    message: str,
+    media_type: str,
+    media_path: str,
+    thumbnail_path: Optional[str] = None,
+    scheduled_time: Optional[int] = None,
+) -> AsyncGenerator[str, None]:
+    """Async generator stream cho normal post (Page API)."""
+
+    def emit(level: str, msg: str) -> str:
+        print(f"[{level.upper()}] {msg}")
+        return f"data: {json.dumps({'level': level, 'msg': msg})}\n\n"
+
+    loop = asyncio.get_event_loop()
+
+    try:
+        mode_label = "Video" if media_type == "video" else "Ảnh"
+        yield emit("info", f"🔄 Đang đăng {mode_label}...")
+
+        if media_type == "video":
+            result = await loop.run_in_executor(
+                None,
+                post_normal_video,
+                page_token, page_id, media_path, message, thumbnail_path, scheduled_time,
+            )
+        else:
+            result = await loop.run_in_executor(
+                None,
+                post_normal_photo,
+                page_token, page_id, media_path, message, scheduled_time,
+            )
+
+        if result["success"]:
+            yield emit("success", f"🎉 BÀI ĐÃ {'LÊN LỊCH' if scheduled_time else 'ĐĂNG'} THÀNH CÔNG!")
+            yield emit("link", result["permalink"])
+            yield emit("post_id", result["post_id"])
+        else:
+            yield emit("error", f"❌ {result.get('error', 'Lỗi không xác định')}")
+
+    except Exception as ex:
+        yield emit("error", f"💥 Exception: {str(ex)}")
+    finally:
+        for path in [media_path, thumbnail_path]:
+            if path and os.path.exists(path):
+                try: os.remove(path)
+                except: pass
+        yield "data: [DONE]\n\n"

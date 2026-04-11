@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import FileUpload from '../components/FileUpload'
 import ThumbnailPicker from '../components/ThumbnailPicker'
 import PostPreview from '../components/PostPreview'
-import LogConsole from '../components/LogConsole'
 import './PublishPage.css'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
@@ -34,60 +33,64 @@ const CTA_TYPES = [
   { value: 'NO_BUTTON',        label: '⛔ Không có nút' },
 ]
 
-const DEFAULT_FORM = {
-  pageId:     '',
-  message:    'POV: Bạn đang cãi lộn nhưng không còn biết phải đáp trả thế nào nữa.',
-  safeLink:   'https://shopee.vn',
-  card1Title: 'Chi tiết sản phẩm 👉',
-  card1Desc:  '',
-  card1Cta:   'LEARN_MORE',
-  card2Title: 'Xem thêm tại đây 👉',
-  card2Desc:  '',
-  card2Cta:   'LEARN_MORE',
+const DEFAULT_CAROUSEL = {
+  pageId: '', message: '', safeLink: 'https://shopee.vn',
+  card1Title: 'Chi tiết sản phẩm 👉', card1Desc: '', card1Cta: 'LEARN_MORE',
+  card2Title: 'Xem thêm tại đây 👉', card2Desc: '', card2Cta: 'LEARN_MORE',
 }
 
 export default function PublishPage() {
-  const [pages, setPages]                   = useState([])
-  const [mode, setMode]                     = useState('single') // 'single' | 'carousel'
-  const [form, setForm]                     = useState(DEFAULT_FORM)
-  const [videoFile, setVideoFile]           = useState(null)
-  const [thumbnailFile, setThumbnailFile]   = useState(null)
-  const [imageFile, setImageFile]           = useState(null)
-  const [logs, setLogs]                     = useState([])
-  const [publishing, setPublishing]         = useState(false)
-  const [done, setDone]                     = useState(false)
-  const [permalink, setPermalink]           = useState(null)
-  const [isScheduled, setIsScheduled]       = useState(false)
-  const [scheduledTime, setScheduledTime]   = useState('')
+  const [pages, setPages]     = useState([])
+  const [mode, setMode]       = useState('normal') // 'normal' | 'single' | 'carousel'
+  const [pageId, setPageId]   = useState('')
+  const [isScheduled, setIsScheduled]   = useState(false)
+  const [scheduledTime, setScheduledTime] = useState('')
+  const [publishing, setPublishing]       = useState(false)
 
-  // Single mode state
-  const [singleMediaType, setSingleMediaType] = useState('video') // 'video' | 'image'
-  const [singleMediaFile, setSingleMediaFile] = useState(null)
-  const [singleThumbFile, setSingleThumbFile] = useState(null)
+  // Toast notification
+  const [toast, setToast] = useState(null) // { type: 'success'|'error'|'publishing', msg, link }
+
+  // Normal mode
+  const [normalMediaType, setNormalMediaType] = useState('video')
+  const [normalFile, setNormalFile]           = useState(null)
+  const [normalThumb, setNormalThumb]         = useState(null)
+  const [normalMsg, setNormalMsg]             = useState('')
+
+  // Single (dark post + link) mode
+  const [singleMediaType, setSingleMediaType] = useState('video')
+  const [singleFile, setSingleFile]           = useState(null)
+  const [singleThumb, setSingleThumb]         = useState(null)
+  const [singleMsg, setSingleMsg]             = useState('')
   const [singleLink, setSingleLink]           = useState('https://shopee.vn')
   const [singleDisplayLink, setSingleDisplayLink] = useState('')
   const [singleCta, setSingleCta]             = useState('LEARN_MORE')
-  const [singleMessage, setSingleMessage]     = useState('')
+
+  // Carousel mode
+  const [cForm, setCForm] = useState(DEFAULT_CAROUSEL)
+  const [videoFile, setVideoFile]         = useState(null)
+  const [thumbnailFile, setThumbnailFile] = useState(null)
+  const [imageFile, setImageFile]         = useState(null)
 
   useEffect(() => {
     fetch(`${API}/api/pages`, { headers: getAuthHeaders() })
       .then(r => r.json())
       .then(d => {
         setPages(d.pages || [])
-        if (d.pages?.length > 0) setForm(f => ({ ...f, pageId: d.pages[0].page_id }))
+        if (d.pages?.length > 0) setPageId(d.pages[0].page_id)
       })
-      .catch(() => setLogs([{ level: 'error', msg: 'Không thể tải danh sách pages' }]))
+      .catch(() => setToast({ type: 'error', msg: 'Không thể tải danh sách pages' }))
   }, [])
 
-  const set = key => e => setForm(f => ({ ...f, [key]: e.target.value }))
-  const addLog = entry => setLogs(prev => [...prev, entry])
-  const currentPageName = pages.find(p => p.page_id === form.pageId)?.page_name || ''
+  const cSet = key => e => setCForm(f => ({ ...f, [key]: e.target.value }))
+  const currentPageName = pages.find(p => p.page_id === pageId)?.page_name || ''
 
-  // ── Shared SSE reader ──
-  async function readSSE(res) {
+  // ── Shared SSE reader: chỉ lấy kết quả cuối ──
+  async function readSSEFinal(res) {
     const reader = res.body.getReader()
     const decoder = new TextDecoder()
     let buffer = ''
+    let finalResult = { type: null, msg: '', link: null }
+
     while (true) {
       const { done: streamDone, value } = await reader.read()
       if (streamDone) break
@@ -97,292 +100,286 @@ export default function PublishPage() {
       for (const line of lines) {
         if (line.startsWith('data: ')) {
           const raw = line.slice(6).trim()
-          if (raw === '[DONE]') { setDone(true); setPublishing(false); break }
+          if (raw === '[DONE]') {
+            setPublishing(false)
+            if (finalResult.type) setToast(finalResult)
+            return
+          }
           try {
             const entry = JSON.parse(raw)
-            if (entry.level === 'link') setPermalink(entry.msg)
-            else if (entry.level !== 'post_id') addLog(entry)
+            if (entry.level === 'success') finalResult = { type: 'success', msg: entry.msg, link: finalResult.link }
+            else if (entry.level === 'error') finalResult = { type: 'error', msg: entry.msg, link: finalResult.link }
+            else if (entry.level === 'link') finalResult.link = entry.msg
           } catch (_) {}
         }
       }
+    }
+    setPublishing(false)
+    if (finalResult.type) setToast(finalResult)
+  }
+
+  async function handleResponse(res) {
+    const contentType = res.headers.get('content-type')
+    if (contentType && contentType.includes('application/json')) {
+      const data = await res.json()
+      setPublishing(false)
+      if (data.success) {
+        setToast({ type: 'success', msg: data.msg })
+      } else {
+        setToast({ type: 'error', msg: data.error || 'Đã xảy ra lỗi khi lưu' })
+      }
+    } else {
+      await readSSEFinal(res)
+    }
+  }
+
+  function getScheduledUnix() {
+    if (!isScheduled) return ''
+    if (!scheduledTime) { alert('Vui lòng chọn thời gian lên lịch'); return null }
+    return Math.floor(new Date(scheduledTime).getTime() / 1000).toString()
+  }
+
+  // ── Normal publish ──
+  async function handlePublishNormal(e) {
+    e.preventDefault()
+    if (!normalFile) return alert('Vui lòng chọn file media')
+    const su = getScheduledUnix(); if (su === null) return
+
+    setToast({ type: 'publishing', msg: 'Đang xử lý bài viết...' })
+    setPublishing(true)
+
+    const fd = new FormData()
+    fd.append('page_id', pageId)
+    fd.append('message', normalMsg)
+    fd.append('media_type', normalMediaType)
+    fd.append('media_file', normalFile)
+    if (normalThumb) fd.append('thumbnail_file', normalThumb)
+    if (su) fd.append('scheduled_time', su)
+
+    try {
+      const res = await fetch(`${API}/api/publish/normal`, { method: 'POST', body: fd, headers: getAuthHeaders() })
+      await handleResponse(res)
+    } catch (err) {
+      setToast({ type: 'error', msg: `Lỗi kết nối: ${err.message}` })
+      setPublishing(false)
+    }
+  }
+
+  // ── Single (dark post + link) publish ──
+  async function handlePublishSingle(e) {
+    e.preventDefault()
+    if (!singleFile) return alert('Vui lòng chọn file media')
+    if (!singleLink) return alert('URL trang web là bắt buộc')
+    const su = getScheduledUnix(); if (su === null) return
+
+    setToast({ type: 'publishing', msg: 'Đang xử lý bài viết...' })
+    setPublishing(true)
+
+    const fd = new FormData()
+    fd.append('page_id', pageId)
+    fd.append('message', singleMsg)
+    fd.append('link', singleLink)
+    fd.append('display_link', singleDisplayLink)
+    fd.append('cta_type', singleCta)
+    fd.append('media_type', singleMediaType)
+    fd.append('media_file', singleFile)
+    if (singleThumb) fd.append('thumbnail_file', singleThumb)
+    if (su) fd.append('scheduled_time', su)
+
+    try {
+      const res = await fetch(`${API}/api/publish/single`, { method: 'POST', body: fd, headers: getAuthHeaders() })
+      await handleResponse(res)
+    } catch (err) {
+      setToast({ type: 'error', msg: `Lỗi kết nối: ${err.message}` })
+      setPublishing(false)
     }
   }
 
   // ── Carousel publish ──
   async function handlePublishCarousel(e) {
     e.preventDefault()
-    if (!videoFile)     return alert('Vui lòng chọn video cho Card 1')
-    if (!thumbnailFile) return alert('Vui lòng chọn ảnh thumbnail cho video')
-    if (!imageFile)     return alert('Vui lòng chọn ảnh cho Card 2')
+    if (!videoFile) return alert('Vui lòng chọn video cho Card 1')
+    if (!thumbnailFile) return alert('Vui lòng chọn thumbnail')
+    if (!imageFile) return alert('Vui lòng chọn ảnh cho Card 2')
+    const su = getScheduledUnix(); if (su === null) return
 
-    setLogs([]); setPublishing(true); setDone(false); setPermalink(null)
-
-    let scheduledUnix = ''
-    if (isScheduled) {
-      if (!scheduledTime) { setPublishing(false); return alert('Vui lòng chọn thời gian lên lịch') }
-      scheduledUnix = Math.floor(new Date(scheduledTime).getTime() / 1000).toString()
-    }
+    setToast({ type: 'publishing', msg: 'Đang xử lý bài viết...' })
+    setPublishing(true)
 
     const fd = new FormData()
-    fd.append('page_id',        form.pageId)
-    fd.append('message',        form.message)
-    fd.append('safe_link',      form.safeLink)
-    fd.append('card1_title',    form.card1Title)
-    fd.append('card1_desc',     form.card1Desc)
-    fd.append('card1_cta',      form.card1Cta)
-    fd.append('card2_title',    form.card2Title)
-    fd.append('card2_desc',     form.card2Desc)
-    fd.append('card2_cta',      form.card2Cta)
-    fd.append('video_file',     videoFile)
+    fd.append('page_id', pageId)
+    fd.append('message', cForm.message)
+    fd.append('safe_link', cForm.safeLink)
+    fd.append('card1_title', cForm.card1Title); fd.append('card1_desc', cForm.card1Desc); fd.append('card1_cta', cForm.card1Cta)
+    fd.append('card2_title', cForm.card2Title); fd.append('card2_desc', cForm.card2Desc); fd.append('card2_cta', cForm.card2Cta)
+    fd.append('video_file', videoFile)
     fd.append('thumbnail_file', thumbnailFile)
-    fd.append('image_file',     imageFile)
-    if (isScheduled && scheduledUnix) fd.append('scheduled_time', scheduledUnix)
+    fd.append('image_file', imageFile)
+    if (su) fd.append('scheduled_time', su)
 
     try {
-      const res = await fetch(`${API}/api/publish`, {
-        method: 'POST', body: fd, headers: getAuthHeaders(),
-      })
-      await readSSE(res)
+      const res = await fetch(`${API}/api/publish`, { method: 'POST', body: fd, headers: getAuthHeaders() })
+      await handleResponse(res)
     } catch (err) {
-      addLog({ level: 'error', msg: `Lỗi kết nối: ${err.message}` })
-    } finally {
+      setToast({ type: 'error', msg: `Lỗi kết nối: ${err.message}` })
       setPublishing(false)
     }
   }
 
-  // ── Single media publish ──
-  async function handlePublishSingle(e) {
-    e.preventDefault()
-    if (!singleMediaFile) return alert('Vui lòng chọn file media')
-    if (!singleLink)      return alert('URL trang web là bắt buộc')
-
-    setLogs([]); setPublishing(true); setDone(false); setPermalink(null)
-
-    let scheduledUnix = ''
-    if (isScheduled) {
-      if (!scheduledTime) { setPublishing(false); return alert('Vui lòng chọn thời gian lên lịch') }
-      scheduledUnix = Math.floor(new Date(scheduledTime).getTime() / 1000).toString()
-    }
-
-    const fd = new FormData()
-    fd.append('page_id',      form.pageId)
-    fd.append('message',      singleMessage)
-    fd.append('link',         singleLink)
-    fd.append('display_link', singleDisplayLink)
-    fd.append('cta_type',     singleCta)
-    fd.append('media_type',   singleMediaType)
-    fd.append('media_file',   singleMediaFile)
-    if (singleThumbFile) fd.append('thumbnail_file', singleThumbFile)
-    if (isScheduled && scheduledUnix) fd.append('scheduled_time', scheduledUnix)
-
-    try {
-      const res = await fetch(`${API}/api/publish/single`, {
-        method: 'POST', body: fd, headers: getAuthHeaders(),
-      })
-      await readSSE(res)
-    } catch (err) {
-      addLog({ level: 'error', msg: `Lỗi kết nối: ${err.message}` })
-    } finally {
-      setPublishing(false)
-    }
-  }
-
-  function handleReset() {
-    setLogs([]); setDone(false); setPermalink(null)
-    setVideoFile(null); setThumbnailFile(null); setImageFile(null)
-    setSingleMediaFile(null); setSingleThumbFile(null)
-  }
-
-  const showLogs = publishing || logs.length > 0 || done
+  // Get the active media file for preview (normal or single)
+  const activeMediaFile = mode === 'normal' ? normalFile : mode === 'single' ? singleFile : null
+  const activeMediaType = mode === 'normal' ? normalMediaType : mode === 'single' ? singleMediaType : null
 
   return (
     <div className="publish-page">
 
-      {/* ── MODE SWITCHER ── */}
+      {/* MODE SWITCHER */}
       <div className="mode-switcher glass">
-        <button
-          className={`mode-btn ${mode === 'single' ? 'active' : ''}`}
-          onClick={() => setMode('single')}
-        >
-          🖼️ Bài đơn (Video/Ảnh + Link)
+        <button className={`mode-btn ${mode === 'normal' ? 'active' : ''}`} onClick={() => setMode('normal')}>
+          📷 Bài thường
         </button>
-        <button
-          className={`mode-btn ${mode === 'carousel' ? 'active' : ''}`}
-          onClick={() => setMode('carousel')}
-        >
-          🃏 Carousel Dark Post
+        <button className={`mode-btn ${mode === 'single' ? 'active' : ''}`} onClick={() => setMode('single')}>
+          🔗 Bài đơn + Link
+        </button>
+        <button className={`mode-btn ${mode === 'carousel' ? 'active' : ''}`} onClick={() => setMode('carousel')}>
+          🃏 Carousel
         </button>
       </div>
 
-      {/* ── HÀNG TRÊN: Fanpage + Scheduling ── */}
+      {/* TOP ROW: Fanpage + Scheduling */}
       <div className="publish-top-row">
         <div className="section-card glass top-card-page">
           <h3 className="section-title">📄 Chọn Fanpage</h3>
-          <select
-            id="page-select"
-            className="select-input"
-            value={form.pageId}
-            onChange={set('pageId')}
-          >
+          <select className="select-input" value={pageId} onChange={e => setPageId(e.target.value)}>
             {pages.length === 0 && <option value="">— Chưa có page —</option>}
-            {pages.map(p => (
-              <option key={p.page_id} value={p.page_id}>{p.page_name}</option>
-            ))}
+            {pages.map(p => <option key={p.page_id} value={p.page_id}>{p.page_name}</option>)}
           </select>
         </div>
-
         <div className="section-card glass top-card-content">
           <h3 className="section-title">⏰ Tùy chọn đăng</h3>
           <div className="scheduling-block">
             <label className="schedule-toggle">
-              <input
-                type="checkbox"
-                checked={isScheduled}
-                onChange={e => setIsScheduled(e.target.checked)}
-              />
+              <input type="checkbox" checked={isScheduled} onChange={e => setIsScheduled(e.target.checked)} />
               <span>⏳ Lên lịch đăng bài</span>
             </label>
             {isScheduled && (
-              <input
-                type="datetime-local"
-                className="text-input schedule-datetime"
-                value={scheduledTime}
-                onChange={e => setScheduledTime(e.target.value)}
-              />
+              <input type="datetime-local" className="text-input schedule-datetime" value={scheduledTime} onChange={e => setScheduledTime(e.target.value)} />
             )}
           </div>
         </div>
       </div>
 
-      {/* ── HÀNG DƯỚI ── */}
+      {/* BOTTOM ROW */}
       <div className="publish-bottom-row">
 
-        {/* Cột trái: Preview hoặc Log */}
+        {/* LEFT: Preview + Toast overlay */}
         <div className="publish-preview-col">
-          {showLogs ? (
-            <LogConsole
-              logs={logs}
-              done={done}
-              permalink={permalink}
-              onReset={handleReset}
-            />
-          ) : mode === 'carousel' ? (
-            <PostPreview
-              form={form}
-              videoFile={videoFile}
-              thumbnailFile={thumbnailFile}
-              imageFile={imageFile}
-              pageName={currentPageName}
-            />
+          {/* Preview always visible */}
+          {mode === 'carousel' ? (
+            <PostPreview form={{...cForm, pageId}} videoFile={videoFile} thumbnailFile={thumbnailFile} imageFile={imageFile} pageName={currentPageName} />
           ) : (
             <div className="section-card glass single-preview-card">
               <h3 className="section-title">👁️ Xem trước</h3>
               <div className="single-preview-body">
                 <div className="single-preview-media">
-                  {singleMediaFile ? (
-                    singleMediaType === 'video' ? (
-                      <video src={URL.createObjectURL(singleMediaFile)} controls className="single-preview-video" />
+                  {activeMediaFile ? (
+                    activeMediaType === 'video' ? (
+                      <video src={URL.createObjectURL(activeMediaFile)} controls className="single-preview-video" />
                     ) : (
-                      <img src={URL.createObjectURL(singleMediaFile)} alt="preview" className="single-preview-img" />
+                      <img src={URL.createObjectURL(activeMediaFile)} alt="" className="single-preview-img" />
                     )
                   ) : (
-                    <div className="single-preview-placeholder">
-                      {singleMediaType === 'video' ? '🎬 Chưa có video' : '🖼️ Chưa có ảnh'}
-                    </div>
+                    <div className="single-preview-placeholder">{activeMediaType === 'video' ? '🎬 Chưa có video' : '🖼️ Chưa có ảnh'}</div>
                   )}
                 </div>
                 <div className="single-preview-info">
-                  <div className="single-preview-link">{singleLink || 'Chưa nhập link'}</div>
-                  <div className="single-preview-msg">{singleMessage || 'Chưa có caption...'}</div>
+                  {mode === 'single' && <div className="single-preview-link">{singleLink || '—'}</div>}
+                  <div className="single-preview-msg">{(mode === 'normal' ? normalMsg : singleMsg) || 'Chưa có caption...'}</div>
                 </div>
               </div>
             </div>
           )}
+
+          {/* Toast notification overlay */}
+          {toast && (
+            <div className={`publish-toast toast-${toast.type}`}>
+              {toast.type === 'publishing' && (
+                <div className="toast-body"><span className="spinner" /><span>{toast.msg}</span></div>
+              )}
+              {toast.type === 'success' && (
+                <div className="toast-body">
+                  <span>{toast.msg}</span>
+                  {toast.link && <a href={toast.link} target="_blank" rel="noreferrer" className="toast-link">🔗 Xem bài viết</a>}
+                  <button className="toast-close" onClick={() => setToast(null)}>✕</button>
+                </div>
+              )}
+              {toast.type === 'error' && (
+                <div className="toast-body">
+                  <span>{toast.msg}</span>
+                  <button className="toast-close" onClick={() => setToast(null)}>✕</button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Cột phải: Form */}
+        {/* RIGHT: Form */}
         <div className="publish-cards-col">
 
-          {mode === 'single' ? (
-            /* ══ SINGLE MODE ══ */
+          {/* ══════ NORMAL MODE ══════ */}
+          {mode === 'normal' && (
             <>
               <div className="section-card glass card-config" style={{ borderLeft: '3px solid var(--accent)' }}>
-                <h3 className="section-title">📝 Nội dung bài đơn</h3>
-
-                {/* Media type toggle */}
+                <h3 className="section-title">📷 Đăng ảnh / video thường</h3>
                 <div className="field-group">
                   <label>Loại media</label>
                   <div className="media-type-toggle">
-                    <button
-                      className={`mt-btn ${singleMediaType === 'video' ? 'active' : ''}`}
-                      onClick={() => { setSingleMediaType('video'); setSingleMediaFile(null) }}
-                      type="button"
-                    >
-                      🎬 Video
-                    </button>
-                    <button
-                      className={`mt-btn ${singleMediaType === 'image' ? 'active' : ''}`}
-                      onClick={() => { setSingleMediaType('image'); setSingleMediaFile(null) }}
-                      type="button"
-                    >
-                      🖼️ Ảnh
-                    </button>
+                    <button className={`mt-btn ${normalMediaType === 'video' ? 'active' : ''}`} onClick={() => { setNormalMediaType('video'); setNormalFile(null) }} type="button">🎬 Video</button>
+                    <button className={`mt-btn ${normalMediaType === 'image' ? 'active' : ''}`} onClick={() => { setNormalMediaType('image'); setNormalFile(null) }} type="button">🖼️ Ảnh</button>
                   </div>
                 </div>
-
-                <FileUpload
-                  id="single-media-upload"
-                  label={singleMediaType === 'video' ? 'Video' : 'Ảnh'}
-                  accept={singleMediaType === 'video' ? 'video/mp4,video/*' : 'image/jpeg,image/png,image/*'}
-                  icon={singleMediaType === 'video' ? '🎬' : '🖼️'}
-                  file={singleMediaFile}
-                  onFile={setSingleMediaFile}
-                />
-
-                {singleMediaType === 'video' && (
-                  <ThumbnailPicker
-                    videoFile={singleMediaFile}
-                    onThumbnailReady={setSingleThumbFile}
-                  />
-                )}
-
+                <FileUpload id="normal-upload" label={normalMediaType === 'video' ? 'Video' : 'Ảnh'} accept={normalMediaType === 'video' ? 'video/mp4,video/*' : 'image/*'} icon={normalMediaType === 'video' ? '🎬' : '🖼️'} file={normalFile} onFile={setNormalFile} />
+                {normalMediaType === 'video' && <ThumbnailPicker videoFile={normalFile} onThumbnailReady={setNormalThumb} />}
                 <div className="field-group">
                   <label>Caption</label>
-                  <textarea
-                    className="token-input caption-input"
-                    rows={2}
-                    value={singleMessage}
-                    onChange={e => setSingleMessage(e.target.value)}
-                    placeholder="Nhập nội dung bài viết..."
-                  />
+                  <textarea className="token-input caption-input" rows={3} value={normalMsg} onChange={e => setNormalMsg(e.target.value)} placeholder="Nhập nội dung bài viết..." />
                 </div>
               </div>
+              <button className="btn-publish" onClick={handlePublishNormal} disabled={publishing || !pageId}>
+                {publishing ? <span className="btn-loading"><span className="spinner" />Đang xử lý...</span> : isScheduled ? '⏳ Lên lịch đăng bài' : '🚀 Đăng bài'}
+              </button>
+            </>
+          )}
 
+          {/* ══════ SINGLE + LINK MODE ══════ */}
+          {mode === 'single' && (
+            <>
+              <div className="section-card glass card-config" style={{ borderLeft: '3px solid var(--accent)' }}>
+                <h3 className="section-title">📝 Bài đơn + Link website</h3>
+                <div className="field-group">
+                  <label>Loại media</label>
+                  <div className="media-type-toggle">
+                    <button className={`mt-btn ${singleMediaType === 'video' ? 'active' : ''}`} onClick={() => { setSingleMediaType('video'); setSingleFile(null) }} type="button">🎬 Video</button>
+                    <button className={`mt-btn ${singleMediaType === 'image' ? 'active' : ''}`} onClick={() => { setSingleMediaType('image'); setSingleFile(null) }} type="button">🖼️ Ảnh</button>
+                  </div>
+                </div>
+                <FileUpload id="single-upload" label={singleMediaType === 'video' ? 'Video' : 'Ảnh'} accept={singleMediaType === 'video' ? 'video/mp4,video/*' : 'image/*'} icon={singleMediaType === 'video' ? '🎬' : '🖼️'} file={singleFile} onFile={setSingleFile} />
+                {singleMediaType === 'video' && <ThumbnailPicker videoFile={singleFile} onThumbnailReady={setSingleThumb} />}
+                <div className="field-group">
+                  <label>Caption</label>
+                  <textarea className="token-input caption-input" rows={2} value={singleMsg} onChange={e => setSingleMsg(e.target.value)} placeholder="Nhập nội dung..." />
+                </div>
+              </div>
               <div className="section-card glass card-config" style={{ borderLeft: '3px solid var(--accent-2)' }}>
                 <h3 className="section-title">🔗 Chuyển đến trang web</h3>
-
                 <div className="field-group">
                   <label>URL trang web <span className="hint">(bắt buộc)</span></label>
-                  <input
-                    type="url"
-                    className="text-input"
-                    value={singleLink}
-                    onChange={e => setSingleLink(e.target.value)}
-                    placeholder="https://www.example.com/page"
-                  />
+                  <input type="url" className="text-input" value={singleLink} onChange={e => setSingleLink(e.target.value)} placeholder="https://example.com" />
                 </div>
-
                 <div className="field-group">
                   <label>Liên kết hiển thị <span className="hint">(tùy chọn)</span></label>
-                  <input
-                    type="text"
-                    className="text-input"
-                    value={singleDisplayLink}
-                    onChange={e => setSingleDisplayLink(e.target.value)}
-                    placeholder="shopee.vn/deal-hot"
-                  />
+                  <input type="text" className="text-input" value={singleDisplayLink} onChange={e => setSingleDisplayLink(e.target.value)} placeholder="shopee.vn/deal" />
                 </div>
-
                 <div className="field-group">
                   <label>Nút CTA</label>
                   <select className="select-input" value={singleCta} onChange={e => setSingleCta(e.target.value)}>
@@ -390,120 +387,45 @@ export default function PublishPage() {
                   </select>
                 </div>
               </div>
-
-              <button
-                id="publish-btn"
-                className="btn-publish"
-                onClick={handlePublishSingle}
-                disabled={publishing || !form.pageId}
-              >
-                {publishing
-                  ? <span className="btn-loading"><span className="spinner" />Đang đăng bài...</span>
-                  : isScheduled ? '⏳ Lên lịch đăng bài' : '🚀 Đăng bài lên Facebook'}
-              </button>
-            </>
-          ) : (
-            /* ══ CAROUSEL MODE ══ */
-            <>
-              <div className="section-card glass card-config" style={{ borderLeft: '3px solid var(--accent)' }}>
-                <h3 className="section-title">✍️ Nội dung bài viết</h3>
-                <div className="field-group">
-                  <label>Caption</label>
-                  <textarea
-                    id="post-message"
-                    className="token-input caption-input"
-                    rows={2}
-                    value={form.message}
-                    onChange={set('message')}
-                  />
-                </div>
-                <div className="field-group">
-                  <label>Link đích (Safe Link)</label>
-                  <input
-                    id="safe-link"
-                    type="url"
-                    className="text-input"
-                    value={form.safeLink}
-                    onChange={set('safeLink')}
-                  />
-                </div>
-              </div>
-
-              {/* Card 1 — Video */}
-              <div className="section-card glass card-config card1-config">
-                <h3 className="section-title">🃏 Card 1 — Video</h3>
-                <div className="field-row">
-                  <div className="field-group">
-                    <label>Tiêu đề</label>
-                    <input id="card1-title" type="text" className="text-input" value={form.card1Title} onChange={set('card1Title')} />
-                  </div>
-                  <div className="field-group">
-                    <label>Nút CTA</label>
-                    <select id="card1-cta" className="select-input" value={form.card1Cta} onChange={set('card1Cta')}>
-                      {CTA_TYPES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                    </select>
-                  </div>
-                </div>
-                <div className="field-group">
-                  <label>Mô tả phụ <span className="hint">(~30 ký tự, tùy chọn)</span></label>
-                  <input id="card1-desc" type="text" className="text-input" value={form.card1Desc} onChange={set('card1Desc')} placeholder="💥 Giảm 50% từ hôm nay" maxLength={80} />
-                </div>
-                <FileUpload
-                  id="video-upload"
-                  label="Video"
-                  accept="video/mp4,video/*"
-                  icon="🎬"
-                  file={videoFile}
-                  onFile={setVideoFile}
-                />
-                <ThumbnailPicker
-                  videoFile={videoFile}
-                  onThumbnailReady={setThumbnailFile}
-                />
-              </div>
-
-              {/* Card 2 — Ảnh */}
-              <div className="section-card glass card-config card2-config">
-                <h3 className="section-title">🃏 Card 2 — Ảnh</h3>
-                <div className="field-row">
-                  <div className="field-group">
-                    <label>Tiêu đề</label>
-                    <input id="card2-title" type="text" className="text-input" value={form.card2Title} onChange={set('card2Title')} />
-                  </div>
-                  <div className="field-group">
-                    <label>Nút CTA</label>
-                    <select id="card2-cta" className="select-input" value={form.card2Cta} onChange={set('card2Cta')}>
-                      {CTA_TYPES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                    </select>
-                  </div>
-                </div>
-                <div className="field-group">
-                  <label>Mô tả phụ <span className="hint">(~30 ký tự, tùy chọn)</span></label>
-                  <input id="card2-desc" type="text" className="text-input" value={form.card2Desc} onChange={set('card2Desc')} placeholder="🛒 shopee.vn" maxLength={80} />
-                </div>
-                <FileUpload
-                  id="image-upload"
-                  label="Ảnh Card 2"
-                  accept="image/jpeg,image/png,image/*"
-                  icon="🖼️"
-                  file={imageFile}
-                  onFile={setImageFile}
-                />
-              </div>
-
-              {/* Nút Đăng bài */}
-              <button
-                id="publish-btn"
-                className="btn-publish"
-                onClick={handlePublishCarousel}
-                disabled={publishing || !form.pageId}
-              >
-                {publishing
-                  ? <span className="btn-loading"><span className="spinner" />Đang đăng bài...</span>
-                  : isScheduled ? '⏳ Lên lịch đăng bài' : '🚀 Đăng bài lên Facebook'}
+              <button className="btn-publish" onClick={handlePublishSingle} disabled={publishing || !pageId}>
+                {publishing ? <span className="btn-loading"><span className="spinner" />Đang xử lý...</span> : isScheduled ? '⏳ Lên lịch đăng bài' : '🚀 Đăng bài'}
               </button>
             </>
           )}
+
+          {/* ══════ CAROUSEL MODE ══════ */}
+          {mode === 'carousel' && (
+            <>
+              <div className="section-card glass card-config" style={{ borderLeft: '3px solid var(--accent)' }}>
+                <h3 className="section-title">✍️ Nội dung Carousel</h3>
+                <div className="field-group"><label>Caption</label><textarea className="token-input caption-input" rows={2} value={cForm.message} onChange={cSet('message')} /></div>
+                <div className="field-group"><label>Safe Link</label><input type="url" className="text-input" value={cForm.safeLink} onChange={cSet('safeLink')} /></div>
+              </div>
+              <div className="section-card glass card-config card1-config">
+                <h3 className="section-title">🃏 Card 1 — Video</h3>
+                <div className="field-row">
+                  <div className="field-group"><label>Tiêu đề</label><input type="text" className="text-input" value={cForm.card1Title} onChange={cSet('card1Title')} /></div>
+                  <div className="field-group"><label>CTA</label><select className="select-input" value={cForm.card1Cta} onChange={cSet('card1Cta')}>{CTA_TYPES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select></div>
+                </div>
+                <div className="field-group"><label>Mô tả <span className="hint">(tùy chọn)</span></label><input type="text" className="text-input" value={cForm.card1Desc} onChange={cSet('card1Desc')} maxLength={80} /></div>
+                <FileUpload id="c-video" label="Video" accept="video/mp4,video/*" icon="🎬" file={videoFile} onFile={setVideoFile} />
+                <ThumbnailPicker videoFile={videoFile} onThumbnailReady={setThumbnailFile} />
+              </div>
+              <div className="section-card glass card-config card2-config">
+                <h3 className="section-title">🃏 Card 2 — Ảnh</h3>
+                <div className="field-row">
+                  <div className="field-group"><label>Tiêu đề</label><input type="text" className="text-input" value={cForm.card2Title} onChange={cSet('card2Title')} /></div>
+                  <div className="field-group"><label>CTA</label><select className="select-input" value={cForm.card2Cta} onChange={cSet('card2Cta')}>{CTA_TYPES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select></div>
+                </div>
+                <div className="field-group"><label>Mô tả <span className="hint">(tùy chọn)</span></label><input type="text" className="text-input" value={cForm.card2Desc} onChange={cSet('card2Desc')} maxLength={80} /></div>
+                <FileUpload id="c-image" label="Ảnh Card 2" accept="image/*" icon="🖼️" file={imageFile} onFile={setImageFile} />
+              </div>
+              <button className="btn-publish" onClick={handlePublishCarousel} disabled={publishing || !pageId}>
+                {publishing ? <span className="btn-loading"><span className="spinner" />Đang xử lý...</span> : isScheduled ? '⏳ Lên lịch đăng bài' : '🚀 Đăng bài'}
+              </button>
+            </>
+          )}
+
         </div>
       </div>
     </div>
