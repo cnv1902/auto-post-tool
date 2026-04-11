@@ -10,48 +10,82 @@
   margin: 0 auto;
 }
 
-/* ── HÀNG TRÊN: Fanpage | Nội dung ── */
+/* ── MODE SWITCHER ── */
+.mode-switcher {
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  border-radius: var(--radius-md);
+  width: fit-content;
+}
+.mode-btn {
+  padding: 10px 24px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: 'Inter', sans-serif;
+  white-space: nowrap;
+}
+.mode-btn:hover:not(.active) {
+  background: rgba(255,255,255,0.04);
+  color: var(--text-primary);
+}
+.mode-btn.active {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff;
+  box-shadow: 0 4px 16px var(--accent-glow);
+}
+
+/* ── HÀNG TRÊN: Fanpage | Scheduling ── */
 .publish-top-row {
   display: grid;
   grid-template-columns: 260px 1fr;
   gap: 16px;
-  align-items: stretch; /* đồng bộ chiều cao */
+  align-items: stretch;
 }
 
-/* Cả 2 card trên phải stretch full height */
 .top-card-page,
 .top-card-content {
   display: flex;
   flex-direction: column;
 }
 
-/* select-input trong fanpage card, stretch full height */
 .top-card-page .select-input {
-  flex: 1;           /* fill remaining height */
+  flex: 1;
   height: auto;
 }
 
-/* Nội dung bài viết: 2 field ngang nhau */
-.top-content-fields {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  align-items: stretch;
-}
-
-/* field-group fill height */
-.top-content-fields .field-group {
+/* Scheduling block */
+.scheduling-block {
   display: flex;
-  flex-direction: column;
+  gap: 20px;
+  align-items: center;
+  flex: 1;
 }
-
-/* Đồng bộ input/textarea chiều cao trong top-row */
-.top-content-fields .token-input,
-.top-content-fields .text-input {
-  flex: 1;           /* fill parent height */
-  resize: none;
-  min-height: 0;     /* allow shrinking */
+.schedule-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem !important;
+  color: var(--text-primary) !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+.schedule-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+.schedule-datetime {
+  max-width: 240px;
+  padding: 8px 12px !important;
 }
 
 /* ── HÀNG DƯỚI: Preview | Card configs ── */
@@ -93,6 +127,84 @@
   font-weight: 400;
 }
 
+/* ── Media Type Toggle ── */
+.media-type-toggle {
+  display: flex;
+  gap: 4px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+}
+.mt-btn {
+  flex: 1;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.mt-btn:hover:not(.active) {
+  background: rgba(255,255,255,0.04);
+}
+.mt-btn.active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 8px var(--accent-glow);
+}
+
+/* ── Single Preview Card ── */
+.single-preview-card {
+  min-height: 300px;
+}
+.single-preview-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.single-preview-media {
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: rgba(0,0,0,0.3);
+  aspect-ratio: 16/9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.single-preview-video,
+.single-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
+.single-preview-placeholder {
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  text-align: center;
+}
+.single-preview-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.single-preview-link {
+  font-size: 0.82rem;
+  color: var(--accent);
+  word-break: break-all;
+  font-weight: 500;
+}
+.single-preview-msg {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
 /* ── Nút Đăng bài ── */
 .btn-publish {
   width: 100%;
@@ -125,14 +237,18 @@
     grid-template-columns: 1fr;
     align-items: start;
   }
-  .top-content-fields {
-    grid-template-columns: 1fr;
-  }
   .publish-bottom-row {
     grid-template-columns: 1fr;
   }
   .publish-preview-col {
     position: relative;
     top: 0;
+  }
+  .mode-switcher {
+    width: 100%;
+  }
+  .mode-btn {
+    flex: 1;
+    text-align: center;
   }
 }

@@ -10,15 +10,26 @@ function getAuthHeaders() {
 
 export default function PostsPage() {
   const [posts, setPosts] = useState([])
+  const [pages, setPages] = useState([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(new Set())
   const [deleting, setDeleting] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  const [filterPageId, setFilterPageId] = useState('')
+
+  // Load pages list for filter
+  useEffect(() => {
+    fetch(`${API}/api/pages`, { headers: getAuthHeaders() })
+      .then(r => r.json())
+      .then(d => setPages(d.pages || []))
+      .catch(() => {})
+  }, [])
 
   async function fetchPosts() {
     setLoading(true)
     try {
-      const res = await fetch(`${API}/api/posts`, { headers: getAuthHeaders() })
+      const qs = filterPageId ? `?page_id=${filterPageId}` : ''
+      const res = await fetch(`${API}/api/posts${qs}`, { headers: getAuthHeaders() })
       const data = await res.json()
       setPosts(data.posts || [])
     } catch (err) {
@@ -28,7 +39,7 @@ export default function PostsPage() {
     }
   }
 
-  useEffect(() => { fetchPosts() }, [])
+  useEffect(() => { fetchPosts() }, [filterPageId])
 
   // Filter posts by search term
   const filtered = posts.filter(p => {
@@ -104,6 +115,12 @@ export default function PostsPage() {
     })
   }
 
+  function renderStatus(status) {
+    if (status === 'published') return '✅ Đã đăng'
+    if (status === 'scheduled') return '⏳ Đã lên lịch'
+    return status
+  }
+
   return (
     <div className="posts-page">
       {/* Header bar */}
@@ -113,6 +130,19 @@ export default function PostsPage() {
           <span className="posts-count">{posts.length} bài viết</span>
         </div>
         <div className="posts-header-right">
+          {/* Page filter */}
+          <div className="posts-filter-box">
+            <select
+              className="posts-filter-select"
+              value={filterPageId}
+              onChange={e => { setFilterPageId(e.target.value); setSelected(new Set()) }}
+            >
+              <option value="">Tất cả Fanpage</option>
+              {pages.map(p => (
+                <option key={p.page_id} value={p.page_id}>{p.page_name}</option>
+              ))}
+            </select>
+          </div>
           <div className="posts-search-box">
             <span className="search-icon">🔍</span>
             <input
@@ -222,7 +252,7 @@ export default function PostsPage() {
                   </td>
                   <td>
                     <span className={`status-badge status-${post.status}`}>
-                      {post.status === 'published' ? '✅ Đã đăng' : post.status === 'scheduled' ? '⏳ Đã lên lịch' : post.status}
+                      {renderStatus(post.status)}
                     </span>
                   </td>
                   <td className="td-date">{formatDate(post.created_at)}</td>

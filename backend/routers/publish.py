@@ -12,7 +12,7 @@ from typing import Annotated
 
 from database import get_db, User, Page, Post
 from auth import get_current_user
-from services.facebook import publish_stream
+from services.facebook import publish_stream, publish_single_stream
 
 router = APIRouter()
 
@@ -138,6 +138,112 @@ async def publish(
                     print(f"[PUBLISH] ✅ Saved post to DB: {post.post_id} (user={current_user.name})")
                 except Exception as ex:
                     print(f"[PUBLISH][WARN] Failed to save post to DB: {ex}")
+
+            yield chunk
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control":               "no-cache",
+            "X-Accel-Buffering":           "no",
+            "Access-Control-Allow-Origin": "*",
+        },
+    )
+
+
+@router.post("/api/publish/single")
+async def publish_single(
+    page_id:      Annotated[str, Form()],
+    message:      Annotated[str, Form()],
+    link:         Annotated[str, Form()],
+    media_type:   Annotated[str, Form()],       # "video" | "image"
+    display_link: Annotated[str, Form()] = "",
+    cta_type:     Annotated[str, Form()] = "LEARN_MORE",
+    scheduled_time: Annotated[str, Form()] = "",
+    media_file:      UploadFile = File(...),
+    thumbnail_file:  UploadFile = File(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    print(f"🚀 Publish Single: user={current_user.name}, page={page_id}, type={media_type}")
+
+    user_token = current_user.access_token
+    ad_account_id = current_user.ad_account_id
+
+    if not user_token:
+        raise HTTPException(status_code=400, detail="Chưa có User Token.")
+    if not ad_account_id:
+        raise HTTPException(status_code=400, detail="Cần ad_account_id để dùng Marketing API.")
+
+    page = (
+        db.query(Page)
+        .filter(Page.page_id == page_id, Page.user_id == current_user.id)
+        .first()
+    )
+    if not page:
+        raise HTTPException(status_code=404, detail=f"Không tìm thấy page ID: {page_id}")
+
+    page_token = page.page_access_token
+
+    # Lưu file tạm
+    suffix = ".mp4" if media_type == "video" else ".jpg"
+    media_path = await _save_upload(media_file, suffix)
+    thumbnail_path = None
+    if thumbnail_file and thumbnail_file.filename:
+        thumbnail_path = await _save_upload(thumbnail_file, ".jpg")
+
+    captured_post = {}
+
+    parsed_scheduled_time = None
+    if scheduled_time.isdigit():
+        parsed_scheduled_time = int(scheduled_time)
+
+    async def event_generator():
+        async for chunk in publish_single_stream(
+            user_token     = user_token,
+            page_token     = page_token,
+            page_id        = page_id,
+            ad_account_id  = ad_account_id,
+            message        = message,
+            link           = link,
+            display_link   = display_link,
+            cta_type       = cta_type,
+            media_type     = media_type,
+            media_path     = media_path,
+            thumbnail_path = thumbnail_path,
+            scheduled_time = parsed_scheduled_time,
+        ):
+            if chunk.startswith("data: ") and chunk.strip() != "data: [DONE]":
+                try:
+                    data = json.loads(chunk[6:].strip())
+                    if data.get("level") == "link":
+                        captured_post["permalink"] = data["msg"]
+                    if data.get("level") == "post_id":
+                        captured_post["post_id"] = data["msg"]
+                    if data.get("level") == "success" and ("BÀI ĐÃ PUBLIC" in data.get("msg", "") or "BÀI ĐÃ LÊN LỊCH" in data.get("msg", "")):
+                        captured_post["success"] = True
+                except Exception:
+                    pass
+
+            if chunk.strip() == "data: [DONE]" and captured_post.get("success"):
+                try:
+                    real_post_id = captured_post.get("post_id") or captured_post.get("permalink", "").split("/")[-1] or uuid.uuid4().hex
+                    post_status = "scheduled" if parsed_scheduled_time else "published"
+                    post = Post(
+                        post_id   = real_post_id,
+                        page_id   = page_id,
+                        page_name = page.page_name,
+                        message   = message[:500],
+                        permalink = captured_post.get("permalink", ""),
+                        status    = post_status,
+                        user_id   = current_user.id,
+                    )
+                    db.add(post)
+                    db.commit()
+                    print(f"[PUBLISH_SINGLE] ✅ Saved post to DB: {post.post_id}")
+                except Exception as ex:
+                    print(f"[PUBLISH_SINGLE][WARN] Failed to save: {ex}")
 
             yield chunk
 

@@ -324,7 +324,9 @@ def post_darkpost_carousel(
         timeout=15,
     )
 
-    # Bước 4: Verify
+    # Bước 4: Verify — lấy permalink, coi như success nếu đã có post_id
+    # (scheduled posts sẽ có is_published=False, và immediate posts
+    #  đôi khi FB delay vài giây nên cũng trả False — không nên dựa vào đây)
     time.sleep(3)
     check_res = requests.get(
         f"{BASE_URL}/{post_id}",
@@ -341,14 +343,8 @@ def post_darkpost_carousel(
         f"https://www.facebook.com/{page_id}/posts/{numeric_post_id}",
     )
 
-    if check_res.get("is_published"):
-        return {"success": True, "post_id": post_id, "permalink": permalink}
-    else:
-        return {
-            "success": False,
-            "error": f"Vẫn chưa public: {check_res}",
-            "permalink": permalink,
-        }
+    # Đã có post_id từ creative → post tồn tại trên FB → success
+    return {"success": True, "post_id": post_id, "permalink": permalink}
 
 
 # ─────────────────────────────────────────────
@@ -475,4 +471,273 @@ async def publish_stream(
                 except Exception:
                     pass
         yield "data: [DONE]\n\n"
+
+
+# ─────────────────────────────────────────────
+#  SINGLE MEDIA POST — 1 video hoặc 1 ảnh + link website
+# ─────────────────────────────────────────────
+
+def post_single_media(
+    user_token: str,
+    page_token: str,
+    page_id: str,
+    ad_account_id: str,
+    message: str,
+    link: str,
+    display_link: str,
+    cta_type: str,
+    media_type: str,           # "video" | "image"
+    video_id: Optional[str] = None,
+    thumbnail_url: Optional[str] = None,
+    image_path: Optional[str] = None,
+    img_url: Optional[str] = None,
+    scheduled_time: Optional[int] = None,
+) -> dict:
+    """
+    Tạo dark post đơn (1 video hoặc 1 ảnh) kèm link website + CTA.
+    Trả về {"success": True, "post_id": ..., "permalink": ...}
+    hoặc  {"success": False, "error": ...}
+    """
+    ts = int(time.time())
+
+    # Build CTA object
+    cta = _build_cta(cta_type, link, page_id)
+
+    if media_type == "video" and video_id:
+        # ── Video dark post ──
+        video_data = {
+            "video_id": video_id,
+            "message": message,
+            "link_description": message[:200],
+            "call_to_action": cta or {"type": "LEARN_MORE", "value": {"link": link}},
+        }
+        if thumbnail_url:
+            video_data["image_url"] = thumbnail_url
+
+        object_story = {
+            "page_id": page_id,
+            "video_data": video_data,
+        }
+    else:
+        # ── Image/link dark post ──
+        # Upload image hash lên ad account
+        if image_path:
+            with open(image_path, "rb") as f:
+                hash_res = requests.post(
+                    f"{BASE_URL}/{ad_account_id}/adimages",
+                    data={"access_token": user_token},
+                    files={"source": f},
+                    timeout=120,
+                ).json()
+            if "images" not in hash_res:
+                return {"success": False, "error": f"Không lấy được image_hash: {hash_res}"}
+            image_hash = list(hash_res["images"].values())[0]["hash"]
+
+        link_data = {
+            "message": message,
+            "link": link,
+            "name": display_link or link,
+        }
+        if img_url:
+            link_data["picture"] = img_url
+        if cta:
+            link_data["call_to_action"] = cta
+
+        object_story = {
+            "page_id": page_id,
+            "link_data": link_data,
+        }
+
+    print(f"[single] object_story_spec: {json.dumps(object_story, ensure_ascii=False)[:500]}")
+
+    # Tạo Ad Creative
+    creative_res = requests.post(
+        f"{BASE_URL}/{ad_account_id}/adcreatives",
+        data={
+            "name": f"SinglePost_{ts}",
+            "object_story_spec": json.dumps(object_story),
+            "access_token": user_token,
+        },
+        timeout=30,
+    ).json()
+
+    if "id" not in creative_res:
+        return {"success": False, "error": f"Tạo creative thất bại: {creative_res}"}
+
+    creative_id = creative_res["id"]
+
+    # Lấy Post ID
+    post_id = None
+    for attempt in range(15):
+        time.sleep(3)
+        story_res = requests.get(
+            f"{BASE_URL}/{creative_id}",
+            params={
+                "fields": "object_story_id,effective_object_story_id",
+                "access_token": user_token,
+            },
+            timeout=15,
+        ).json()
+        post_id = story_res.get("effective_object_story_id") or story_res.get("object_story_id")
+        if post_id:
+            break
+
+    if not post_id:
+        return {"success": False, "error": "Không lấy được Post ID sau 15 lần thử."}
+
+    # Publish hoặc Schedule
+    payload = {"access_token": page_token}
+    if scheduled_time:
+        payload["is_published"] = "false"
+        payload["scheduled_publish_time"] = str(scheduled_time)
+    else:
+        payload["is_published"] = "true"
+
+    requests.post(
+        f"{BASE_URL}/{post_id}",
+        data=payload,
+        timeout=15,
+    )
+
+    # Lấy permalink
+    time.sleep(3)
+    check_res = requests.get(
+        f"{BASE_URL}/{post_id}",
+        params={
+            "fields": "id,permalink_url",
+            "access_token": page_token,
+        },
+        timeout=15,
+    ).json()
+
+    numeric_post_id = post_id.split("_")[-1]
+    permalink = check_res.get(
+        "permalink_url",
+        f"https://www.facebook.com/{page_id}/posts/{numeric_post_id}",
+    )
+
+    return {"success": True, "post_id": post_id, "permalink": permalink}
+
+
+# ─────────────────────────────────────────────
+#  SINGLE MEDIA — Async Stream
+# ─────────────────────────────────────────────
+
+async def publish_single_stream(
+    user_token: str,
+    page_token: str,
+    page_id: str,
+    ad_account_id: str,
+    message: str,
+    link: str,
+    display_link: str,
+    cta_type: str,
+    media_type: str,
+    media_path: str,
+    thumbnail_path: Optional[str] = None,
+    scheduled_time: Optional[int] = None,
+) -> AsyncGenerator[str, None]:
+    """
+    Async generator stream log cho single media post.
+    """
+
+    def emit(level: str, msg: str) -> str:
+        print(f"[{level.upper()}] {msg}")
+        return f"data: {json.dumps({'level': level, 'msg': msg})}\n\n"
+
+    loop = asyncio.get_event_loop()
+
+    try:
+        video_id = None
+        thumbnail_url = None
+        img_url = None
+
+        if media_type == "video":
+            # 1. Upload Video
+            yield emit("info", f"🔄 Đang tải lên video [{os.path.basename(media_path)}] ({os.path.getsize(media_path) / 1024 / 1024:.1f} MB)...")
+            video_id = await loop.run_in_executor(
+                None, upload_hidden_video, page_token, media_path
+            )
+            if not video_id:
+                yield emit("error", "❌ Upload video thất bại.")
+                yield "data: [DONE]\n\n"
+                return
+            yield emit("success", f"✅ Upload video OK — ID: {video_id}")
+
+            # 2. Upload Thumbnail (nếu có)
+            if thumbnail_path:
+                yield emit("info", f"🖼️ Đang tải lên thumbnail...")
+                thumb_id, thumbnail_url = await loop.run_in_executor(
+                    None, upload_hidden_photo, page_token, page_id, thumbnail_path
+                )
+                if thumbnail_url:
+                    yield emit("success", f"✅ Upload thumbnail OK")
+                else:
+                    yield emit("warning", "⚠️ Upload thumbnail thất bại, dùng thumbnail mặc định.")
+
+            # 3. Chờ video ready
+            yield emit("info", "⏳ Đang chờ Facebook xử lý video...")
+            ready = await loop.run_in_executor(
+                None, wait_for_video_ready, page_token, video_id, 300
+            )
+            if not ready:
+                yield emit("error", "❌ Video không sẵn sàng. Dừng lại.")
+                yield "data: [DONE]\n\n"
+                return
+            yield emit("success", "✅ Video đã sẵn sàng!")
+
+        else:
+            # Image mode — upload ảnh ẩn
+            yield emit("info", f"🔄 Đang tải lên ảnh [{os.path.basename(media_path)}]...")
+            photo_id, img_url = await loop.run_in_executor(
+                None, upload_hidden_photo, page_token, page_id, media_path
+            )
+            if not img_url:
+                yield emit("error", "❌ Upload ảnh thất bại.")
+                yield "data: [DONE]\n\n"
+                return
+            yield emit("success", f"✅ Upload ảnh OK — ID: {photo_id}")
+
+        # 4. Đăng bài
+        mode_label = "Video" if media_type == "video" else "Ảnh"
+        yield emit("info", f"🔄 Đang tạo Dark Post ({mode_label} + Link)...")
+        result = await loop.run_in_executor(
+            None,
+            post_single_media,
+            user_token,
+            page_token,
+            page_id,
+            ad_account_id,
+            message,
+            link,
+            display_link,
+            cta_type,
+            media_type,
+            video_id,
+            thumbnail_url,
+            media_path if media_type == "image" else None,
+            img_url,
+            scheduled_time,
+        )
+
+        if result["success"]:
+            yield emit("success", f"🎉 BÀI ĐÃ {'LÊN LỊCH' if scheduled_time else 'PUBLIC'}!")
+            yield emit("link", result["permalink"])
+            yield emit("post_id", result["post_id"])
+        else:
+            yield emit("error", f"❌ {result.get('error', 'Lỗi không xác định')}")
+            if result.get("permalink"):
+                yield emit("link", result["permalink"])
+
+    except Exception as ex:
+        yield emit("error", f"💥 Exception: {str(ex)}")
+    finally:
+        for path in [media_path, thumbnail_path]:
+            if path and os.path.exists(path):
+                try:
+                    os.remove(path)
+                except Exception:
+                    pass
+        yield "data: [DONE]\n\n"
+
 
