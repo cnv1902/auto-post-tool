@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 import os
 
 from config import CORS_ORIGINS
@@ -8,6 +10,16 @@ from database import init_db
 from routers import setup, pages, publish, extract, video, posts, auth, admin, bootstrap
 
 app = FastAPI(title="Auto Post Tool — Facebook Publisher", version="2.0.0")
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc: RequestValidationError):
+    # Log rõ field nào thiếu/không hợp lệ để debug nhanh các lỗi 422 multipart/form-data
+    print(f"[422][VALIDATION] {request.method} {request.url}")
+    try:
+        print(exc.errors())
+    except Exception:
+        pass
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})
 
 # CORS — load origins từ .env
 app.add_middleware(

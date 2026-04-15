@@ -33,11 +33,12 @@ async def _save_upload(file: UploadFile, suffix: str) -> str:
 @router.post("/api/publish")
 async def publish(
     page_id:     Annotated[str, Form()],
-    message:     Annotated[str, Form()],
     card1_link:  Annotated[str, Form()],
     card2_link:  Annotated[str, Form()],
     card1_title: Annotated[str, Form()],
     card2_title: Annotated[str, Form()],
+    message:     Annotated[str | None, Form()] = None,
+    caption:     Annotated[str | None, Form()] = None,
     card1_desc:  Annotated[str, Form()] = "",
     card2_desc:  Annotated[str, Form()] = "",
     card1_cta:   Annotated[str, Form()] = "LEARN_MORE",
@@ -49,6 +50,8 @@ async def publish(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    if message is None:
+        message = caption or ""
     print(f"🚀 Publish: user={current_user.name}, page={page_id}, cta1={card1_cta}, cta2={card2_cta}")
 
     # ── Lấy tokens từ User (per-user) ──

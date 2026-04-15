@@ -75,6 +75,7 @@ export default function PublishPage() {
   const [videoFile, setVideoFile]         = useState(null)
   const [thumbnailFile, setThumbnailFile] = useState(null)
   const [imageFile, setImageFile]         = useState(null)
+  const [isCard2ImageManual, setIsCard2ImageManual] = useState(false)
 
   useEffect(() => {
     fetch(`${API}/api/pages`, { headers: getAuthHeaders() })
@@ -89,12 +90,16 @@ export default function PublishPage() {
   const cSet = key => e => setCForm(f => ({ ...f, [key]: e.target.value }))
   const currentPageName = pages.find(p => p.page_id === pageId)?.page_name || ''
 
-  // Auto copy thumbnail to image 2 if missing
+  // Auto dùng thumbnail làm ảnh Card 2 cho tới khi user tự đổi ảnh Card 2
   useEffect(() => {
-    if (thumbnailFile && !imageFile) {
+    if (!thumbnailFile) {
+      if (!isCard2ImageManual) setImageFile(null)
+      return
+    }
+    if (!isCard2ImageManual) {
       setImageFile(thumbnailFile)
     }
-  }, [thumbnailFile]) // Only run when thumbnailFile changes
+  }, [thumbnailFile, isCard2ImageManual])
 
   // ── Shared SSE reader: chỉ lấy kết quả cuối ──
   async function readSSEFinal(res) {
@@ -484,7 +489,17 @@ export default function PublishPage() {
                   <div className="field-group"><label>Mô tả (tùy chọn)</label><input type="text" className="text-input" value={cForm.card2Desc} onChange={cSet('card2Desc')} maxLength={80} /></div>
                 </div>
                 <div style={{marginTop: '12px'}}>
-                   <FileUpload id="c-image" label="Ảnh Card 2" accept="image/*" icon={<ImageIcon size={24}/>} file={imageFile} onFile={setImageFile} />
+                  <FileUpload
+                    id="c-image"
+                    label="Ảnh Card 2"
+                    accept="image/*"
+                    icon={<ImageIcon size={24}/>}
+                    file={imageFile}
+                    onFile={(f) => {
+                      setImageFile(f)
+                      if (f) setIsCard2ImageManual(true)
+                    }}
+                  />
                 </div>
               </div>
               <button className="btn-primary btn-publish" onClick={handlePublishCarousel} disabled={publishing || !pageId}>
