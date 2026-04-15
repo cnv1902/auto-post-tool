@@ -6,6 +6,7 @@ import os
 import time
 import json
 import asyncio
+import mimetypes
 import requests
 from typing import AsyncGenerator, Optional
 
@@ -93,11 +94,12 @@ def upload_hidden_photo(
 ) -> tuple[Optional[str], Optional[str]]:
     """Upload ảnh ẩn lên page. Trả về (photo_id, img_url) hoặc (None, None)."""
     try:
+        mime_type = mimetypes.guess_type(file_path)[0] or "image/jpeg"
         with open(file_path, "rb") as f:
             res = requests.post(
                 f"{BASE_URL}/{page_id}/photos",
                 data={"published": "false", "access_token": page_token},
-                files={"source": (os.path.basename(file_path), f, "image/jpeg")},
+                files={"source": (os.path.basename(file_path), f, mime_type)},
                 timeout=120,
             ).json()
         if "id" in res:
@@ -226,7 +228,6 @@ def post_darkpost_carousel(
     video_id: str,
     thumbnail_url: str,
     img_url: str,
-    card2_file_path: str,
     scheduled_time: Optional[int] = None,
 ) -> dict:
     """
@@ -235,20 +236,6 @@ def post_darkpost_carousel(
     hoặc  {"success": False, "error": ...}
     """
     ts = int(time.time())
-
-    # Bước 0: Lấy image_hash từ ad account
-    with open(card2_file_path, "rb") as f:
-        hash_res = requests.post(
-            f"{BASE_URL}/{ad_account_id}/adimages",
-            data={"access_token": user_token},
-            files={"source": f},
-            timeout=120,
-        ).json()
-
-    if "images" not in hash_res:
-        return {"success": False, "error": f"Không lấy được image_hash: {hash_res}"}
-
-    image_hash = list(hash_res["images"].values())[0]["hash"]
 
     # Bước 1: Build Cards
     card1 = _build_card({
@@ -265,7 +252,6 @@ def post_darkpost_carousel(
         "description": card2_desc,
         "link":      card2_link,
         "picture":   img_url,
-        "image_hash": image_hash,
         "cta_type":  card2_cta,
     }, page_id)
 
@@ -451,7 +437,6 @@ async def publish_stream(
             video_id,
             thumbnail_url,
             img_url,
-            image_path,
             scheduled_time,
         )
 

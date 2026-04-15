@@ -21,8 +21,10 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 async def _save_upload(file: UploadFile, suffix: str) -> str:
-    """Lưu file upload tạm thời, trả về đường dẫn tuyệt đối."""
-    filename = f"{uuid.uuid4().hex}{suffix}"
+    """Lưu file upload tạm thời, giữ extension gốc nếu có."""
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    safe_ext = ext if ext else suffix
+    filename = f"{uuid.uuid4().hex}{safe_ext}"
     dest = os.path.abspath(os.path.join(UPLOAD_DIR, filename))
     content = await file.read()
     with open(dest, "wb") as f:
