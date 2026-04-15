@@ -211,6 +211,18 @@ def _build_card(card_data: dict, page_id: str) -> dict:
     return card
 
 
+def _normalize_carousel_link(link: str, fallback_link: str) -> str:
+    """Tránh dùng link nội bộ của Facebook cho child attachment vì hay bị render lỗi."""
+    if not link:
+        return fallback_link
+
+    normalized = link.strip().lower()
+    if "facebook.com" in normalized or "fb.com" in normalized:
+        return fallback_link
+
+    return link
+
+
 def post_darkpost_carousel(
     user_token: str,
     page_token: str,
@@ -237,6 +249,7 @@ def post_darkpost_carousel(
     hoặc  {"success": False, "error": ...}
     """
     ts = int(time.time())
+    card2_link = _normalize_carousel_link(card2_link, card1_link)
 
     # Bước 1: Build Cards
     card1 = _build_card({

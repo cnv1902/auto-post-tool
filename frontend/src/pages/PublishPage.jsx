@@ -41,7 +41,7 @@ const CTA_TYPES = [
 const DEFAULT_CAROUSEL = {
   pageId: '', message: '',
   card1Title: 'Chi tiết sản phẩm 👉', card1Desc: '', card1Link: 'https://shopee.vn', card1Cta: 'LEARN_MORE',
-  card2Title: 'Xem thêm tại đây 👉', card2Desc: '', card2Link: 'https://facebook.com', card2Cta: 'LEARN_MORE',
+  card2Title: 'Xem thêm tại đây 👉', card2Desc: '', card2Link: 'https://shopee.vn', card2Cta: 'LEARN_MORE',
 }
 
 export default function PublishPage() {
