@@ -45,11 +45,13 @@
   gap: var(--space-2);
   overflow-x: auto;
   padding: 4px 2px;
-  scrollbar-width: thin;
+  /* Hide scrollbar */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
 }
-.thumb-list::-webkit-scrollbar { height: 4px; }
-.thumb-list::-webkit-scrollbar-track { background: transparent; }
-.thumb-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.thumb-list::-webkit-scrollbar { 
+  display: none; /* Chrome, Safari and Opera */
+}
 
 .thumb-item {
   position: relative;
