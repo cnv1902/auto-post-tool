@@ -192,10 +192,11 @@ def _build_card(card_data: dict, page_id: str) -> dict:
         "link": card_data["link"],
     }
 
-    if card_data.get("picture"):
-        card["picture"] = card_data["picture"]
+    # Facebook chỉ cho phép 1 trong 2 trường ảnh: picture hoặc image_hash.
     if card_data.get("image_hash"):
         card["image_hash"] = card_data["image_hash"]
+    elif card_data.get("picture"):
+        card["picture"] = card_data["picture"]
     if card_data.get("description"):
         card["description"] = card_data["description"]
     if card_data.get("video_id"):
@@ -274,7 +275,6 @@ def post_darkpost_carousel(
         "link_data": {
             "message": message,
             "link": card1_link,
-            "picture": thumbnail_url,
             "child_attachments": [card1, card2],
             "multi_share_end_card": False,
         },
