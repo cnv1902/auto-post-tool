@@ -197,6 +197,8 @@
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   aspect-ratio: 16/9;
+  min-height: 180px;
+  max-height: 360px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -351,6 +353,11 @@
   .schedule-datetime {
     max-width: 100%;
     width: 100%;
+  }
+
+  .single-preview-media {
+    min-height: 160px;
+    max-height: 300px;
   }
 }
 

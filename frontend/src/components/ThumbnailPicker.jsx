@@ -56,9 +56,23 @@ export default function ThumbnailPicker({ videoFile, onThumbnailReady }) {
       .catch(err => {
         if (err.name === 'AbortError') return
         console.error('Lỗi khi extract frames:', err)
-        setFrames([])
-        onThumbnailReady(null)
-        setExtractError(err.message || 'Trích xuất frame thất bại')
+        extractFramesClientSide(videoFile)
+          .then((localFrames) => {
+            if (localFrames.length > 0) {
+              setFrames(localFrames)
+              setSelectedIdx(0)
+              setExtractError('')
+              return
+            }
+            setFrames([])
+            onThumbnailReady(null)
+            setExtractError(err.message || 'Trích xuất frame thất bại')
+          })
+          .catch(() => {
+            setFrames([])
+            onThumbnailReady(null)
+            setExtractError(err.message || 'Trích xuất frame thất bại')
+          })
       })
       .finally(() => setLoading(false))
 
@@ -175,4 +189,62 @@ function useObjectUrl(file) {
   }, [url])
 
   return url
+}
+
+async function extractFramesClientSide(file, count = 5) {
+  if (!file) return []
+
+  const url = URL.createObjectURL(file)
+  const video = document.createElement('video')
+  video.preload = 'auto'
+  video.muted = true
+  video.playsInline = true
+  video.src = url
+
+  const waitLoaded = () => new Promise((resolve, reject) => {
+    const onLoaded = () => resolve()
+    const onError = () => reject(new Error('Không thể đọc metadata video trên trình duyệt'))
+    video.addEventListener('loadedmetadata', onLoaded, { once: true })
+    video.addEventListener('error', onError, { once: true })
+  })
+
+  const seekTo = (time) => new Promise((resolve, reject) => {
+    const onSeeked = () => resolve()
+    const onError = () => reject(new Error('Seek video thất bại'))
+    video.addEventListener('seeked', onSeeked, { once: true })
+    video.addEventListener('error', onError, { once: true })
+    video.currentTime = time
+  })
+
+  try {
+    await waitLoaded()
+
+    const duration = Number.isFinite(video.duration) ? video.duration : 0
+    if (duration <= 0) return []
+
+    const canvas = document.createElement('canvas')
+    const maxWidth = 640
+    const srcW = video.videoWidth || 1280
+    const srcH = video.videoHeight || 720
+    const outW = srcW > maxWidth ? maxWidth : srcW
+    const outH = Math.max(1, Math.round((srcH * outW) / srcW))
+    canvas.width = outW
+    canvas.height = outH
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return []
+
+    const frames = []
+    for (let i = 0; i < count; i++) {
+      const t = (duration * (i + 1)) / (count + 1)
+      await seekTo(Math.max(0, Math.min(t, duration - 0.05)))
+      ctx.drawImage(video, 0, 0, outW, outH)
+      frames.push(canvas.toDataURL('image/jpeg', 0.85))
+    }
+
+    return frames
+  } finally {
+    URL.revokeObjectURL(url)
+    video.removeAttribute('src')
+    video.load()
+  }
 }

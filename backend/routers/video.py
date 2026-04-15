@@ -30,8 +30,11 @@ async def extract_frames(
     if video is None:
         raise HTTPException(status_code=422, detail="Thiếu file video (field 'video' hoặc 'video_file').")
 
-    # Lưu video tạm
-    tmp_name = f"{uuid.uuid4().hex}.mp4"
+    # Lưu video tạm, ưu tiên giữ extension gốc để decoder nhận diện tốt hơn.
+    ext = os.path.splitext(video.filename or "")[1].lower()
+    if ext not in {".mp4", ".mov", ".avi", ".mkv", ".webm", ".m4v", ".3gp"}:
+        ext = ".mp4"
+    tmp_name = f"{uuid.uuid4().hex}{ext}"
     tmp_path = os.path.abspath(os.path.join(UPLOAD_DIR, tmp_name))
 
     try:
@@ -117,6 +120,32 @@ async def extract_frames(
                 continue
             b64 = base64.b64encode(buffer).decode('utf-8')
             frames_b64.append(f"data:image/jpeg;base64,{b64}")
+
+        # Fallback: một số codec mở được metadata nhưng seek theo frame thất bại.
+        # Khi đó đọc tuần tự để cố gắng lấy đủ frame.
+        if len(frames_b64) == 0:
+            cap.release()
+            cap = cv2.VideoCapture(tmp_path)
+            sequential = []
+            idx = 0
+            max_scan = min(max(total_frames, 300), 2000)
+            while idx < max_scan:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                if idx % 8 == 0:
+                    h, w = frame.shape[:2]
+                    if w > 640:
+                        scale = 640 / w
+                        frame = cv2.resize(frame, (640, int(h * scale)))
+                    ok, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+                    if ok:
+                        b64 = base64.b64encode(buffer).decode('utf-8')
+                        sequential.append(f"data:image/jpeg;base64,{b64}")
+                        if len(sequential) >= 5:
+                            break
+                idx += 1
+            frames_b64 = sequential
 
         cap.release()
 

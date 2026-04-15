@@ -109,6 +109,8 @@
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1; /* Square */
+  min-height: 220px;
+  max-height: 460px;
   background: #111;
   display: flex;
   justify-content: center;
@@ -117,6 +119,8 @@
 }
 
 .fb-card-media {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -294,6 +298,11 @@
 }
 
 @media (max-width: 768px) {
+  .fb-card-media-wrapper {
+    min-height: 190px;
+    max-height: 360px;
+  }
+
   .fb-header,
   .fb-caption,
   .fb-card-info,
@@ -326,6 +335,11 @@
 }
 
 @media (max-width: 480px) {
+  .fb-card-media-wrapper {
+    min-height: 160px;
+    max-height: 300px;
+  }
+
   .fb-avatar {
     width: 36px;
     height: 36px;
