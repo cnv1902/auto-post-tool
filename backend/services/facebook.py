@@ -228,7 +228,6 @@ def post_darkpost_carousel(
     video_id: str,
     thumbnail_url: str,
     img_url: str,
-    card2_file_path: str,
     scheduled_time: Optional[int] = None,
 ) -> dict:
     """
@@ -237,23 +236,6 @@ def post_darkpost_carousel(
     hoặc  {"success": False, "error": ...}
     """
     ts = int(time.time())
-
-    # Bước 0: Ưu tiên image_hash cho card 2 (ổn định hơn picture URL trong ad creative)
-    image_hash = None
-    try:
-        with open(card2_file_path, "rb") as f:
-            hash_res = requests.post(
-                f"{BASE_URL}/{ad_account_id}/adimages",
-                data={"access_token": user_token},
-                files={"source": f},
-                timeout=120,
-            ).json()
-        if "images" in hash_res and hash_res["images"]:
-            image_hash = list(hash_res["images"].values())[0].get("hash")
-        else:
-            print(f"[carousel][warn] Không lấy được image_hash, fallback picture. FB res: {hash_res}")
-    except Exception as ex:
-        print(f"[carousel][warn] Exception khi lấy image_hash, fallback picture: {ex}")
 
     # Bước 1: Build Cards
     card1 = _build_card({
@@ -270,14 +252,11 @@ def post_darkpost_carousel(
         "description": card2_desc,
         "link":      card2_link,
         "picture":   img_url,
-        "image_hash": image_hash,
         "cta_type":  card2_cta,
     }, page_id)
 
-    if card2.get("image_hash"):
-        print("[carousel] Card2 dùng image_hash")
-    elif card2.get("picture"):
-        print("[carousel] Card2 fallback dùng picture URL")
+    if card2.get("picture"):
+        print("[carousel] Card2 dùng picture URL")
     else:
         print("[carousel][warn] Card2 không có image source")
 
@@ -464,7 +443,6 @@ async def publish_stream(
             video_id,
             thumbnail_url,
             img_url,
-            image_path,
             scheduled_time,
         )
 
