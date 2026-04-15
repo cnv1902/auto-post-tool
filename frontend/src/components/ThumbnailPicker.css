@@ -35,6 +35,11 @@
   gap: var(--space-1);
 }
 
+.thumb-error {
+  font-size: var(--font-xs);
+  color: var(--error);
+}
+
 .thumb-list {
   display: flex;
   gap: var(--space-2);

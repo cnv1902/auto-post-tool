@@ -1,10 +1,13 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { MoreHorizontal, X, ThumbsUp, MessageCircle, Share, Globe, ChevronLeft, ChevronRight, Play } from 'lucide-react'
 import './PostPreview.css'
 
 export default function PostPreview({ form, videoFile, thumbnailFile, imageFile, pageName }) {
   const [currentSlide, setCurrentSlide] = useState(0)
   const videoRef = useRef(null)
+  const videoUrl = useObjectUrl(videoFile)
+  const thumbnailUrl = useObjectUrl(thumbnailFile)
+  const imageUrl = useObjectUrl(imageFile)
 
   // Auto-play / pause video in carousel based on visibility
   useEffect(() => {
@@ -101,13 +104,13 @@ export default function PostPreview({ form, videoFile, thumbnailFile, imageFile,
                     <video
                       ref={videoRef}
                       className="fb-card-media"
-                      src={URL.createObjectURL(videoFile)}
+                      src={videoUrl || undefined}
                       muted
                       loop
                       playsInline
                     />
                   ) : thumbnailFile ? (
-                    <img className="fb-card-media" src={URL.createObjectURL(thumbnailFile)} alt="" />
+                    <img className="fb-card-media" src={thumbnailUrl || undefined} alt="" />
                   ) : (
                     <div className="fb-card-placeholder">
                       <Play size={48} opacity={0.2} />
@@ -132,7 +135,7 @@ export default function PostPreview({ form, videoFile, thumbnailFile, imageFile,
             <div className="fb-card">
                <div className="fb-card-media-wrapper">
                   {imageFile ? (
-                    <img className="fb-card-media" src={URL.createObjectURL(imageFile)} alt="" />
+                    <img className="fb-card-media" src={imageUrl || undefined} alt="" />
                   ) : (
                     <div className="fb-card-placeholder">
                        <span style={{color: 'var(--text-muted)'}}>Hình ảnh</span>
@@ -184,4 +187,19 @@ export default function PostPreview({ form, videoFile, thumbnailFile, imageFile,
       </div>
     </div>
   )
+}
+
+function useObjectUrl(file) {
+  const url = useMemo(() => {
+    if (!file) return ''
+    return URL.createObjectURL(file)
+  }, [file])
+
+  useEffect(() => {
+    return () => {
+      if (url) URL.revokeObjectURL(url)
+    }
+  }, [url])
+
+  return url
 }

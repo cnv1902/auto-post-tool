@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ImagePlus, Images, Loader2, Maximize } from 'lucide-react'
 import './ThumbnailPicker.css'
 
@@ -9,6 +9,8 @@ export default function ThumbnailPicker({ videoFile, onThumbnailReady }) {
   const [selectedIdx, setSelectedIdx] = useState(0)
   const [loading, setLoading] = useState(false)
   const [customThumb, setCustomThumb] = useState(null)
+  const [extractError, setExtractError] = useState('')
+  const customThumbUrl = useObjectUrl(customThumb)
   
   // Ref for the hidden file input (for custom thumbnail)
   const customInputRef = useRef(null)
@@ -18,27 +20,49 @@ export default function ThumbnailPicker({ videoFile, onThumbnailReady }) {
       setFrames([])
       setSelectedIdx(0)
       setCustomThumb(null)
+      setExtractError('')
       onThumbnailReady(null)
       return
     }
 
     setLoading(true)
+    setExtractError('')
     const fd = new FormData()
     fd.append('video_file', videoFile)
+    const controller = new AbortController()
 
     fetch(`${API}/api/tools/extract-frames`, {
       method: 'POST',
-      body: fd
+      body: fd,
+      signal: controller.signal,
     })
-      .then(res => res.json())
+      .then(async (res) => {
+        const data = await res.json()
+        if (!res.ok) {
+          throw new Error(data?.detail || 'Không thể trích xuất frame từ video')
+        }
+        return data
+      })
       .then(data => {
-        if (data.frames) {
+        if (Array.isArray(data.frames) && data.frames.length > 0) {
           setFrames(data.frames)
           setSelectedIdx(0) // Mặc định chọn frame 0
+          return
         }
+        setFrames([])
+        onThumbnailReady(null)
+        setExtractError('Không tìm thấy frame hợp lệ trong video')
       })
-      .catch(err => console.error('Lỗi khi extract frames:', err))
+      .catch(err => {
+        if (err.name === 'AbortError') return
+        console.error('Lỗi khi extract frames:', err)
+        setFrames([])
+        onThumbnailReady(null)
+        setExtractError(err.message || 'Trích xuất frame thất bại')
+      })
       .finally(() => setLoading(false))
+
+    return () => controller.abort()
   }, [videoFile])
 
   // Convert frame b64 / custom file => File object để gửi lên server
@@ -48,7 +72,7 @@ export default function ThumbnailPicker({ videoFile, onThumbnailReady }) {
       return
     }
 
-    if (frames.length > 0) {
+    if (frames.length > 0 && selectedIdx >= 0 && selectedIdx < frames.length) {
       const b64Data = frames[selectedIdx].split(',')[1]
       const byteCharacters = atob(b64Data)
       const byteNumbers = new Array(byteCharacters.length)
@@ -74,10 +98,20 @@ export default function ThumbnailPicker({ videoFile, onThumbnailReady }) {
 
   return (
     <div className="thumb-picker animate-fade-in">
+      <input
+        type="file"
+        ref={customInputRef}
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={handleCustomThumbChange}
+      />
+
       <div className="thumb-picker-header">
         <label className="thumb-picker-title"><Images size={16}/> Chọn Thumbnail</label>
         {loading && <span className="thumb-loading"><Loader2 size={12} className="spin-icon" /> Đang trích xuất...</span>}
       </div>
+
+      {!!extractError && <div className="thumb-error">{extractError}</div>}
 
       <div className="thumb-list">
         {/* Nút Upload Custom Thumbnail */}
@@ -86,16 +120,9 @@ export default function ThumbnailPicker({ videoFile, onThumbnailReady }) {
           onClick={() => customInputRef.current?.click()}
         >
           {customThumb ? (
-            <img src={URL.createObjectURL(customThumb)} alt="Custom" className="thumb-img" />
+            <img src={customThumbUrl || undefined} alt="Custom" className="thumb-img" />
           ) : (
              <>
-               <input
-                 type="file"
-                 ref={customInputRef}
-                 accept="image/*"
-                 style={{ display: 'none' }}
-                 onChange={handleCustomThumbChange}
-               />
                <ImagePlus size={20} className="text-muted"/>
                <span style={{fontSize: '0.65rem', color: 'var(--text-muted)'}}>Tải ảnh lên</span>
              </>
@@ -133,4 +160,19 @@ export default function ThumbnailPicker({ videoFile, onThumbnailReady }) {
 
 function CheckCircle2(props) {
     return <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+}
+
+function useObjectUrl(file) {
+  const url = useMemo(() => {
+    if (!file) return ''
+    return URL.createObjectURL(file)
+  }, [file])
+
+  useEffect(() => {
+    return () => {
+      if (url) URL.revokeObjectURL(url)
+    }
+  }, [url])
+
+  return url
 }

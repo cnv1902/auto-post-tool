@@ -190,8 +190,12 @@ def _build_card(card_data: dict, page_id: str) -> dict:
     card = {
         "name": card_data["name"],
         "link": card_data["link"],
-        "picture": card_data["picture"],
     }
+
+    if card_data.get("picture"):
+        card["picture"] = card_data["picture"]
+    if card_data.get("image_hash"):
+        card["image_hash"] = card_data["image_hash"]
     if card_data.get("description"):
         card["description"] = card_data["description"]
     if card_data.get("video_id"):
@@ -260,6 +264,7 @@ def post_darkpost_carousel(
         "description": card2_desc,
         "link":      card2_link,
         "picture":   img_url,
+        "image_hash": image_hash,
         "cta_type":  card2_cta,
     }, page_id)
 

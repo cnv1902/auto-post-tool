@@ -5,7 +5,6 @@ Trả về mảng base64 JPG để frontend hiển thị cho user chọn thumbna
 import os
 import uuid
 import base64
-import random
 import cv2
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from typing import Optional
@@ -46,32 +45,58 @@ async def extract_frames(
             raise HTTPException(status_code=400, detail="Không thể mở video. Kiểm tra định dạng file.")
 
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        if total_frames < 5:
-            raise HTTPException(status_code=400, detail=f"Video quá ngắn ({total_frames} frames). Cần ít nhất 5 frames.")
 
-        # Chọn 5 vị trí trải đều từ đầu → cuối (tránh frame đầu/cuối quá sát)
-        # Mục tiêu: 5 frame khác nhau rõ rệt, ổn định hơn so với random.
-        margin = max(1, total_frames // 20)  # ~5% margin
-        start = margin
-        end = max(margin, total_frames - margin - 1)
-        if end <= start:
-            start = 0
-            end = max(0, total_frames - 1)
+        # Một số codec/container trả CAP_PROP_FRAME_COUNT = 0 dù video hợp lệ.
+        # Khi đó fallback quét tuần tự một đoạn đầu video để lấy frame.
+        if total_frames <= 0:
+            sampled_frames = []
+            max_scan = 300
+            scan_idx = 0
 
-        n = 5
+            while scan_idx < max_scan:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                if scan_idx % 10 == 0:
+                    sampled_frames.append(frame)
+                scan_idx += 1
+
+            if not sampled_frames:
+                raise HTTPException(status_code=400, detail="Không đọc được frame nào từ video.")
+
+            picked = sampled_frames[:5]
+            frames_b64 = []
+            for frame in picked:
+                h, w = frame.shape[:2]
+                if w > 640:
+                    scale = 640 / w
+                    frame = cv2.resize(frame, (640, int(h * scale)))
+
+                ok, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+                if not ok:
+                    continue
+                b64 = base64.b64encode(buffer).decode('utf-8')
+                frames_b64.append(f"data:image/jpeg;base64,{b64}")
+
+            cap.release()
+
+            if len(frames_b64) == 0:
+                raise HTTPException(status_code=500, detail="Không thể extract frame nào từ video.")
+
+            return {"frames": frames_b64, "total_frames": 0}
+
+        # Chọn tối đa 5 vị trí trải đều từ đầu → cuối.
+        n = min(5, max(total_frames, 1))
+        margin = max(0, total_frames // 20)
+        start = min(margin, max(total_frames - 1, 0))
+        end = max(start, total_frames - margin - 1)
+
         if n == 1 or end == start:
             positions = [start]
         else:
             step = (end - start) / (n - 1)
             positions = [int(round(start + i * step)) for i in range(n)]
-            # De-dupe nếu rounding trùng nhau (video rất ngắn)
             positions = sorted({min(max(p, 0), total_frames - 1) for p in positions})
-            while len(positions) < n:
-                cand = positions[-1] + 1
-                if cand >= total_frames:
-                    break
-                positions.append(cand)
-            positions = positions[:n]
 
         frames_b64 = []
         for pos in positions:
@@ -87,7 +112,9 @@ async def extract_frames(
                 frame = cv2.resize(frame, (640, int(h * scale)))
 
             # Encode thành JPEG base64
-            _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            ok, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            if not ok:
+                continue
             b64 = base64.b64encode(buffer).decode('utf-8')
             frames_b64.append(f"data:image/jpeg;base64,{b64}")
 
