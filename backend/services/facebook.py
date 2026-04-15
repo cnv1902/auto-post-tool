@@ -226,8 +226,8 @@ def post_darkpost_carousel(
     card1_cta: str,
     card2_cta: str,
     video_id: str,
-    thumbnail_url: str,
-    img_url: str,
+    thumbnail_hash: str,
+    img_hash: str,
     scheduled_time: Optional[int] = None,
 ) -> dict:
     """
@@ -242,7 +242,7 @@ def post_darkpost_carousel(
         "name":      card1_title,
         "description": card1_desc,
         "link":      card1_link,
-        "picture":   thumbnail_url,
+        "image_hash": thumbnail_hash,
         "cta_type":  card1_cta,
         "video_id":  video_id,
     }, page_id)
@@ -251,12 +251,12 @@ def post_darkpost_carousel(
         "name":      card2_title,
         "description": card2_desc,
         "link":      card2_link,
-        "picture":   img_url,
+        "image_hash": img_hash,
         "cta_type":  card2_cta,
     }, page_id)
 
-    if card2.get("picture"):
-        print("[carousel] Card2 dùng picture URL")
+    if card2.get("image_hash"):
+        print("[carousel] Card2 dùng image_hash")
     else:
         print("[carousel][warn] Card2 không có image source")
 
@@ -345,7 +345,30 @@ def post_darkpost_carousel(
 # ─────────────────────────────────────────────
 #  ASYNC GENERATOR: Stream từng bước log
 # ─────────────────────────────────────────────
-
+def upload_image_to_adimages(user_token: str, ad_account_id: str, file_path: str) -> Optional[str]:
+    """
+    Upload image to Facebook Ad Account images library using /adimages.
+    Returns the image_hash string if successful, else None.
+    """
+    url = f"{BASE_URL}/{ad_account_id}/adimages"
+    try:
+        with open(file_path, "rb") as f:
+            res = requests.post(
+                url,
+                data={"access_token": user_token},
+                files={"source": f},
+                timeout=120,
+            ).json()
+            
+        if "images" in res and res["images"]:
+            # res["images"] is a dict where keys are filename/hash, return the hash
+            images_dict = res["images"]
+            # get the first value of dict
+            for key, val in images_dict.items():
+                 return val.get("hash")
+    except Exception as e:
+        print(f"[ERROR] upload_image_to_adimages: {e}")
+    return None
 async def publish_stream(
     user_token: str,
     page_token: str,
@@ -389,27 +412,27 @@ async def publish_stream(
             return
         yield emit("success", f"✅ Upload video OK — ID: {video_id}")
 
-        # 2. Upload Thumbnail cho Video (Card 1)
-        yield emit("info", f"🖼️ Đang tải lên thumbnail video [{os.path.basename(thumbnail_path)}]...")
-        thumb_id, thumbnail_url = await loop.run_in_executor(
-            None, upload_hidden_photo, page_token, page_id, thumbnail_path
+        # 2. Upload Thumbnail cho Video (Card 1) qua mảng AdImages
+        yield emit("info", f"🖼️ Đang tải lên thumbnail video [{os.path.basename(thumbnail_path)}] (vào /adimages)...")
+        thumbnail_hash = await loop.run_in_executor(
+            None, upload_image_to_adimages, user_token, ad_account_id, thumbnail_path
         )
-        if not thumbnail_url:
-            yield emit("error", "❌ Upload thumbnail thất bại. Dừng lại.")
+        if not thumbnail_hash:
+            yield emit("error", "❌ Upload thumbnail vào AdImages thất bại. Dừng lại.")
             yield "data: [DONE]\n\n"
             return
-        yield emit("success", f"✅ Upload thumbnail OK — ID: {thumb_id}")
+        yield emit("success", f"✅ Upload thumbnail AdImages OK — Hash: {thumbnail_hash[:8]}...")
 
-        # 3. Upload Ảnh (Card 2)
-        yield emit("info", f"🔄 Đang tải lên ảnh Card 2 [{os.path.basename(image_path)}]...")
-        photo_id, img_url = await loop.run_in_executor(
-            None, upload_hidden_photo, page_token, page_id, image_path
+        # 3. Upload Ảnh (Card 2) qua mảng AdImages
+        yield emit("info", f"🔄 Đang tải lên ảnh Card 2 [{os.path.basename(image_path)}] (vào /adimages)...")
+        img_hash = await loop.run_in_executor(
+            None, upload_image_to_adimages, user_token, ad_account_id, image_path
         )
-        if not img_url:
-            yield emit("error", "❌ Upload ảnh Card 2 thất bại. Dừng lại.")
+        if not img_hash:
+            yield emit("error", "❌ Upload ảnh Card 2 vào AdImages thất bại. Dừng lại.")
             yield "data: [DONE]\n\n"
             return
-        yield emit("success", f"✅ Upload ảnh Card 2 OK — ID: {photo_id}")
+        yield emit("success", f"✅ Upload ảnh Card 2 AdImages OK — Hash: {img_hash[:8]}...")
 
         # 4. Chờ video sẵn sàng
         yield emit("info", f"⏳ Đang chờ Facebook xử lý video (có thể mất vài phút)...")
@@ -441,8 +464,8 @@ async def publish_stream(
             card1_cta,
             card2_cta,
             video_id,
-            thumbnail_url,
-            img_url,
+            thumbnail_hash,
+            img_hash,
             scheduled_time,
         )
 
