@@ -227,7 +227,8 @@ def post_darkpost_carousel(
     card2_cta: str,
     video_id: str,
     thumbnail_hash: str,
-    img_hash: str,
+    card2_img_hash: Optional[str] = None,
+    card2_picture: Optional[str] = None,
     scheduled_time: Optional[int] = None,
 ) -> dict:
     """
@@ -251,12 +252,15 @@ def post_darkpost_carousel(
         "name":      card2_title,
         "description": card2_desc,
         "link":      card2_link,
-        "image_hash": img_hash,
+        "image_hash": card2_img_hash,
+        "picture":   card2_picture,
         "cta_type":  card2_cta,
     }, page_id)
 
     if card2.get("image_hash"):
         print("[carousel] Card2 dùng image_hash")
+    elif card2.get("picture"):
+        print("[carousel] Card2 dùng picture url")
     else:
         print("[carousel][warn] Card2 không có image source")
 
@@ -423,16 +427,16 @@ async def publish_stream(
             return
         yield emit("success", f"✅ Upload thumbnail AdImages OK — Hash: {thumbnail_hash[:8]}...")
 
-        # 3. Upload Ảnh (Card 2) qua mảng AdImages
-        yield emit("info", f"🔄 Đang tải lên ảnh Card 2 [{os.path.basename(image_path)}] (vào /adimages)...")
-        img_hash = await loop.run_in_executor(
-            None, upload_image_to_adimages, user_token, ad_account_id, image_path
+        # 3. Upload Ảnh (Card 2) lên page để lấy URL (picture)
+        yield emit("info", f"🔄 Đang tải lên ảnh Card 2 [{os.path.basename(image_path)}] (lấy URL)...")
+        _photo_id, card2_picture = await loop.run_in_executor(
+            None, upload_hidden_photo, page_token, page_id, image_path
         )
-        if not img_hash:
-            yield emit("error", "❌ Upload ảnh Card 2 vào AdImages thất bại. Dừng lại.")
+        if not card2_picture:
+            yield emit("error", "❌ Upload ảnh Card 2 thất bại. Dừng lại.")
             yield "data: [DONE]\n\n"
             return
-        yield emit("success", f"✅ Upload ảnh Card 2 AdImages OK — Hash: {img_hash[:8]}...")
+        yield emit("success", "✅ Upload ảnh Card 2 OK")
 
         # 4. Chờ video sẵn sàng
         yield emit("info", f"⏳ Đang chờ Facebook xử lý video (có thể mất vài phút)...")
@@ -465,7 +469,8 @@ async def publish_stream(
             card2_cta,
             video_id,
             thumbnail_hash,
-            img_hash,
+            None,
+            card2_picture,
             scheduled_time,
         )
 
