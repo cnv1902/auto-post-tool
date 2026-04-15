@@ -2,8 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { ImagePlus, Images, Loader2, Maximize } from 'lucide-react'
 import './ThumbnailPicker.css'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-
 export default function ThumbnailPicker({ videoFile, onThumbnailReady }) {
   const [frames, setFrames] = useState([])
   const [selectedIdx, setSelectedIdx] = useState(0)
@@ -27,56 +25,28 @@ export default function ThumbnailPicker({ videoFile, onThumbnailReady }) {
 
     setLoading(true)
     setExtractError('')
-    const fd = new FormData()
-    fd.append('video_file', videoFile)
-    const controller = new AbortController()
-
-    fetch(`${API}/api/tools/extract-frames`, {
-      method: 'POST',
-      body: fd,
-      signal: controller.signal,
-    })
-      .then(async (res) => {
-        const data = await res.json()
-        if (!res.ok) {
-          throw new Error(data?.detail || 'Không thể trích xuất frame từ video')
-        }
-        return data
-      })
-      .then(data => {
-        if (Array.isArray(data.frames) && data.frames.length > 0) {
-          setFrames(data.frames)
-          setSelectedIdx(0) // Mặc định chọn frame 0
+    extractFramesClientSide(videoFile, 10)
+      .then((localFrames) => {
+        if (localFrames.length > 0) {
+          setFrames(localFrames)
+          setSelectedIdx(0)
+          setExtractError('')
           return
         }
+
         setFrames([])
         onThumbnailReady(null)
-        setExtractError('Không tìm thấy frame hợp lệ trong video')
+        setExtractError('Không thể trích xuất thumbnail từ video này trên trình duyệt')
       })
-      .catch(err => {
-        if (err.name === 'AbortError') return
-        console.error('Lỗi khi extract frames:', err)
-        extractFramesClientSide(videoFile)
-          .then((localFrames) => {
-            if (localFrames.length > 0) {
-              setFrames(localFrames)
-              setSelectedIdx(0)
-              setExtractError('')
-              return
-            }
-            setFrames([])
-            onThumbnailReady(null)
-            setExtractError(err.message || 'Trích xuất frame thất bại')
-          })
-          .catch(() => {
-            setFrames([])
-            onThumbnailReady(null)
-            setExtractError(err.message || 'Trích xuất frame thất bại')
-          })
+      .catch((err) => {
+        console.error('Lỗi khi extract frames client-side:', err)
+        setFrames([])
+        onThumbnailReady(null)
+        setExtractError(err?.message || 'Trích xuất frame thất bại')
       })
       .finally(() => setLoading(false))
 
-    return () => controller.abort()
+    return () => {}
   }, [videoFile])
 
   // Convert frame b64 / custom file => File object để gửi lên server

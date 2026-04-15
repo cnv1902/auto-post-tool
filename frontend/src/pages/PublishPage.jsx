@@ -101,6 +101,12 @@ export default function PublishPage() {
     }
   }, [thumbnailFile, isCard2ImageManual])
 
+  // Mỗi khi đổi video mới, reset về chế độ auto cho Card 2.
+  useEffect(() => {
+    setIsCard2ImageManual(false)
+    setImageFile(null)
+  }, [videoFile])
+
   // ── Shared SSE reader: chỉ lấy kết quả cuối ──
   async function readSSEFinal(res) {
     const reader = res.body.getReader()
@@ -215,9 +221,11 @@ export default function PublishPage() {
   // ── Carousel publish ──
   async function handlePublishCarousel(e) {
     e.preventDefault()
+    const effectiveCard2Image = isCard2ImageManual ? imageFile : thumbnailFile
+
     if (!videoFile) return alert('Vui lòng chọn video cho Card 1')
     if (!thumbnailFile) return alert('Vui lòng chọn thumbnail')
-    if (!imageFile) return alert('Vui lòng chọn ảnh cho Card 2')
+    if (!effectiveCard2Image) return alert('Vui lòng chọn ảnh cho Card 2')
     const su = getScheduledUnix(); if (su === null) return
 
     setToast({ type: 'publishing', msg: 'Đang xử lý bài viết...' })
@@ -230,7 +238,7 @@ export default function PublishPage() {
     fd.append('card2_link', cForm.card2Link); fd.append('card2_title', cForm.card2Title); fd.append('card2_desc', cForm.card2Desc); fd.append('card2_cta', cForm.card2Cta)
     fd.append('video_file', videoFile)
     fd.append('thumbnail_file', thumbnailFile)
-    fd.append('image_file', imageFile)
+    fd.append('image_file', effectiveCard2Image)
     if (su) fd.append('scheduled_time', su)
 
     try {
@@ -496,8 +504,15 @@ export default function PublishPage() {
                     icon={<ImageIcon size={24}/>}
                     file={imageFile}
                     onFile={(f) => {
-                      setImageFile(f)
-                      if (f) setIsCard2ImageManual(true)
+                      if (f) {
+                        setImageFile(f)
+                        setIsCard2ImageManual(true)
+                        return
+                      }
+
+                      // Nếu bỏ chọn ảnh custom thì quay về auto theo thumbnail.
+                      setIsCard2ImageManual(false)
+                      setImageFile(thumbnailFile)
                     }}
                   />
                 </div>

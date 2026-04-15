@@ -84,7 +84,10 @@ async def extract_frames(
             cap.release()
 
             if len(frames_b64) == 0:
-                raise HTTPException(status_code=500, detail="Không thể extract frame nào từ video.")
+                raise HTTPException(
+                    status_code=400,
+                    detail="Không thể trích xuất frame từ video (có thể codec AV1 không được hỗ trợ trên server).",
+                )
 
             return {"frames": frames_b64, "total_frames": 0}
 
@@ -150,7 +153,10 @@ async def extract_frames(
         cap.release()
 
         if len(frames_b64) == 0:
-            raise HTTPException(status_code=500, detail="Không thể extract frame nào từ video.")
+            raise HTTPException(
+                status_code=400,
+                detail="Không thể trích xuất frame từ video (có thể codec AV1 không được hỗ trợ trên server).",
+            )
 
         return {"frames": frames_b64, "total_frames": total_frames}
 
